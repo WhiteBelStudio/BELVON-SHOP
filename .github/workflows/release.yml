@@ -27,7 +27,7 @@ jobs:
         run: flutter pub get
       - name: Analyze
         run: flutter analyze
-      - name: Build APK
+      - name: Build APK installer
         run: flutter build apk --release
       - uses: actions/upload-artifact@v4
         with:
@@ -35,7 +35,7 @@ jobs:
           path: build/app/outputs/flutter-apk/app-release.apk
 
   windows:
-    name: Windows build
+    name: Windows installer
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,16 +49,46 @@ jobs:
         run: flutter pub get
       - name: Build Windows
         run: flutter build windows --release
-      - name: Package Windows
+      - name: Install Inno Setup
         shell: pwsh
-        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath BELVON-SHOP-Windows.zip
+        run: choco install innosetup --no-progress -y
+      - name: Create Windows installer
+        shell: pwsh
+        run: |
+          $release = (Resolve-Path "build/windows/x64/runner/Release").Path
+          @"
+          [Setup]
+          AppName=BELVON SHOP
+          AppVersion=1.0.1
+          AppPublisher=WhiteBelStudio
+          DefaultDirName={autopf}\BELVON SHOP
+          DefaultGroupName=BELVON SHOP
+          OutputDir=.
+          OutputBaseFilename=BELVON-SHOP-Windows-Setup-1.0.1
+          Compression=lzma
+          SolidCompression=yes
+          ArchitecturesInstallIn64BitMode=x64compatible
+          UninstallDisplayName=BELVON SHOP
+          PrivilegesRequired=lowest
+
+          [Files]
+          Source: "$release\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+
+          [Icons]
+          Name: "{autodesktop}\BELVON SHOP"; Filename: "{app}\belvon_shop.exe"
+          Name: "{group}\BELVON SHOP"; Filename: "{app}\belvon_shop.exe"
+
+          [Run]
+          Filename: "{app}\belvon_shop.exe"; Description: "Запустить BELVON SHOP"; Flags: nowait postinstall skipifsilent
+          "@ | Set-Content -Encoding UTF8 installer.iss
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
       - uses: actions/upload-artifact@v4
         with:
-          name: BELVON-SHOP-Windows
-          path: BELVON-SHOP-Windows.zip
+          name: BELVON-SHOP-Windows-Installer
+          path: BELVON-SHOP-Windows-Setup-1.0.1.exe
 
   macos:
-    name: macOS app
+    name: macOS installer
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -72,15 +102,18 @@ jobs:
         run: flutter pub get
       - name: Build macOS
         run: flutter build macos --release
-      - name: Package macOS
-        run: ditto -c -k --sequesterRsrc --keepParent build/macos/Build/Products/Release/belvon_shop.app BELVON-SHOP-macOS.zip
+      - name: Create macOS DMG installer
+        run: |
+          mkdir -p dmg-root
+          cp -R build/macos/Build/Products/Release/belvon_shop.app dmg-root/BELVON\ SHOP.app
+          hdiutil create -volname "BELVON SHOP" -srcfolder dmg-root -ov -format UDZO BELVON-SHOP-macOS-Installer-1.0.1.dmg
       - uses: actions/upload-artifact@v4
         with:
-          name: BELVON-SHOP-macOS
-          path: BELVON-SHOP-macOS.zip
+          name: BELVON-SHOP-macOS-Installer
+          path: BELVON-SHOP-macOS-Installer-1.0.1.dmg
 
   ios:
-    name: iOS build preparation
+    name: iOS IPA package
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -94,15 +127,19 @@ jobs:
         run: flutter pub get
       - name: Prepare unsigned iOS release
         run: flutter build ios --release --no-codesign
-      - name: Package unsigned iOS app
-        run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphoneos/Runner.app BELVON-SHOP-iOS-unsigned.zip
+      - name: Create unsigned IPA package
+        run: |
+          rm -rf Payload
+          mkdir Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/BELVON\ SHOP.app
+          zip -r BELVON-SHOP-iOS-unsigned-1.0.1.ipa Payload
       - uses: actions/upload-artifact@v4
         with:
-          name: BELVON-SHOP-iOS
-          path: BELVON-SHOP-iOS-unsigned.zip
+          name: BELVON-SHOP-iOS-IPA
+          path: BELVON-SHOP-iOS-unsigned-1.0.1.ipa
 
   release:
-    name: Publish BELVON SHOP 1.0.0
+    name: Publish BELVON SHOP 1.0.1
     needs: [android, windows, macos, ios]
     runs-on: ubuntu-latest
     steps:
@@ -116,17 +153,18 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0
-          name: BELVON SHOP 1.0.0
+          tag_name: v1.0.1
+          name: BELVON SHOP 1.0.1
           body: |
-            BELVON SHOP 1.0.0
+            BELVON SHOP 1.0.1
 
-            Cross-platform release artifacts:
-            - Windows
-            - Android APK
-            - macOS
-            - iOS unsigned build preparation
+            Installer-focused cross-platform release:
+            - Windows: BELVON-SHOP-Windows-Setup-1.0.1.exe
+            - Android: app-release.apk
+            - macOS: BELVON-SHOP-macOS-Installer-1.0.1.dmg
+            - iOS: unsigned IPA package
 
-            iOS requires Apple signing/provisioning for installation on a physical device.
+            Windows and macOS are distributed as native installers/packages.
+            iOS IPA is unsigned and requires Apple signing/provisioning before installation on a physical device.
           files: flat/*
           make_latest: true
