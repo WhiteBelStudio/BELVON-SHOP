@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -36,15 +37,24 @@ class AuthUser {
 class AuthService {
   static const _tokenKey = 'belvon_auth_token';
   static const _userKey = 'belvon_auth_user';
+  static const _deviceKey = 'belvon_device_id';
 
   static String? _token;
   static AuthUser? _user;
+  static String? _deviceId;
 
   static String? get token => _token;
   static AuthUser? get user => _user;
+  static String get deviceId => _deviceId!;
 
   static Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
+    _deviceId = prefs.getString(_deviceKey);
+    if (_deviceId == null || _deviceId!.isEmpty) {
+      final random = Random.secure();
+      _deviceId = List.generate(24, (_) => random.nextInt(16).toRadixString(16)).join();
+      await prefs.setString(_deviceKey, _deviceId!);
+    }
     _token = prefs.getString(_tokenKey);
     final raw = prefs.getString(_userKey);
     if (raw != null) {
