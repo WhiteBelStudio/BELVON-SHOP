@@ -213,6 +213,7 @@ class _ShopPageState extends State<ShopPage> {
     final email = TextEditingController();
     final password = TextEditingController();
     var busy = false;
+    String? error;
 
     await showDialog<void>(
       context: context,
@@ -234,6 +235,10 @@ class _ShopPageState extends State<ShopPage> {
                   obscureText: true,
                   decoration: const InputDecoration(labelText: 'Пароль'),
                 ),
+                if (error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(error!, style: TextStyle(color: Theme.of(dialogContext).colorScheme.error)),
+                ],
               ],
             ),
           ),
@@ -243,17 +248,20 @@ class _ShopPageState extends State<ShopPage> {
               onPressed: busy
                   ? null
                   : () async {
-                      setDialog(() => busy = true);
+                      setDialog(() {
+                        busy = true;
+                        error = null;
+                      });
                       try {
                         await ApiService.login(email.text.trim(), password.text);
                         if (dialogContext.mounted) Navigator.pop(dialogContext);
                         if (mounted) setState(() {});
                       } catch (e) {
                         if (dialogContext.mounted) {
-                          setDialog(() => busy = false);
-                          ScaffoldMessenger.of(dialogContext).showSnackBar(
-                            SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-                          );
+                          setDialog(() {
+                            busy = false;
+                            error = e.toString().replaceFirst('Exception: ', '');
+                          });
                         }
                       }
                     },
