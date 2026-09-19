@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'data/products.dart';
 import 'models/product.dart';
 import 'services/update_service.dart';
+import 'services/auth_service.dart';
+import 'services/api_service.dart';
+import 'admin/admin_page.dart';
 
 class BelvonApp extends StatelessWidget {
   const BelvonApp({super.key});
@@ -132,26 +135,135 @@ class _ShopPageState extends State<ShopPage> {
     );
   }
 
-  Widget profile() => ListView(
-    padding: const EdgeInsets.all(20),
-    children: [
-      const CircleAvatar(radius: 42, child: Icon(Icons.person, size: 42)),
-      const SizedBox(height: 16),
-      const Center(child: Text('Мой профиль', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800))),
-      const SizedBox(height: 20),
-      Card(child: Column(children: [
-        ListTile(leading: const Icon(Icons.receipt_long), title: const Text('Мои заказы'), trailing: const Icon(Icons.chevron_right), onTap: () {}),
-        ListTile(leading: const Icon(Icons.settings_outlined), title: const Text('Настройки'), trailing: const Icon(Icons.chevron_right), onTap: () {}),
-        ListTile(
-          leading: const Icon(Icons.system_update_rounded),
-          title: const Text('Обновление приложения'),
-          subtitle: const Text('Проверить новую версию'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: checkForUpdate,
+  Widget profile() {
+    final user = AuthService.user;
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        CircleAvatar(radius: 42, child: Icon(user == null ? Icons.person : Icons.verified_user, size: 42)),
+        const SizedBox(height: 16),
+        Center(
+          child: Text(
+            user?.email ?? 'Гость',
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+          ),
         ),
-      ])),
-    ],
-  );
+        if (user != null) ...[
+          const SizedBox(height: 5),
+          Center(child: Text(user.isOwner ? 'Владелец' : user.isAdmin ? 'Администратор' : 'Покупатель')),
+        ],
+        const SizedBox(height: 20),
+        Card(
+          child: Column(
+            children: [
+              if (user == null)
+                ListTile(
+                  leading: const Icon(Icons.login_rounded),
+                  title: const Text('Войти в аккаунт'),
+                  subtitle: const Text('Авторизация для профиля и админ-панели'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: showLogin,
+                ),
+              if (user != null && user.isAdmin)
+                ListTile(
+                  leading: const Icon(Icons.admin_panel_settings_rounded),
+                  title: const Text('Админ-панель'),
+                  subtitle: Text(user.isOwner ? 'Полный доступ владельца' : 'Управление магазином'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AdminPage()),
+                  ),
+                ),
+              ListTile(
+                leading: const Icon(Icons.receipt_long),
+                title: const Text('Мои заказы'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {},
+              ),
+              ListTile(
+                leading: const Icon(Icons.settings_outlined),
+                title: const Text('Настройки'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {},
+              ),
+              ListTile(
+                leading: const Icon(Icons.system_update_rounded),
+                title: const Text('Обновление приложения'),
+                subtitle: const Text('Проверить новую версию'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: checkForUpdate,
+              ),
+              if (user != null)
+                ListTile(
+                  leading: const Icon(Icons.logout_rounded),
+                  title: const Text('Выйти'),
+                  onTap: () async {
+                    await AuthService.logout();
+                    if (mounted) setState(() {});
+                  },
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> showLogin() async {
+    final email = TextEditingController();
+    final password = TextEditingController();
+    var busy = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (dialogContext, setDialog) => AlertDialog(
+          title: const Text('Вход'),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: email,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(labelText: 'Email'),
+                ),
+                TextField(
+                  controller: password,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: 'Пароль'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: busy ? null : () => Navigator.pop(dialogContext), child: const Text('Отмена')),
+            FilledButton(
+              onPressed: busy
+                  ? null
+                  : () async {
+                      setDialog(() => busy = true);
+                      try {
+                        await ApiService.login(email.text.trim(), password.text);
+                        if (dialogContext.mounted) Navigator.pop(dialogContext);
+                        if (mounted) setState(() {});
+                      } catch (e) {
+                        if (dialogContext.mounted) {
+                          setDialog(() => busy = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+                          );
+                        }
+                      }
+                    },
+              child: Text(busy ? 'Вход...' : 'Войти'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Future<void> checkForUpdate() async {
     if (!mounted) return;
