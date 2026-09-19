@@ -251,7 +251,7 @@ class _ShopPageState extends State<ShopPage> {
                       } catch (e) {
                         if (dialogContext.mounted) {
                           setDialog(() => busy = false);
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
                             SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
                           );
                         }
