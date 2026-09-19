@@ -1,0 +1,130 @@
+name: BELVON SHOP Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Flutter platform files
+        run: flutter create --platforms=android .
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze
+      - name: Build APK
+        run: flutter build apk --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BELVON-SHOP-Android
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+  windows:
+    name: Windows build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Flutter platform files
+        run: flutter create --platforms=windows .
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Build Windows
+        run: flutter build windows --release
+      - name: Package Windows
+        shell: pwsh
+        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath BELVON-SHOP-Windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BELVON-SHOP-Windows
+          path: BELVON-SHOP-Windows.zip
+
+  macos:
+    name: macOS app
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Flutter platform files
+        run: flutter create --platforms=macos .
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Build macOS
+        run: flutter build macos --release
+      - name: Package macOS
+        run: ditto -c -k --sequesterRsrc --keepParent build/macos/Build/Products/Release/belvon_shop.app BELVON-SHOP-macOS.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BELVON-SHOP-macOS
+          path: BELVON-SHOP-macOS.zip
+
+  ios:
+    name: iOS build preparation
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Flutter platform files
+        run: flutter create --platforms=ios .
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Prepare unsigned iOS release
+        run: flutter build ios --release --no-codesign
+      - name: Package unsigned iOS app
+        run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphoneos/Runner.app BELVON-SHOP-iOS-unsigned.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BELVON-SHOP-iOS
+          path: BELVON-SHOP-iOS-unsigned.zip
+
+  release:
+    name: Publish BELVON SHOP 1.0.0
+    needs: [android, windows, macos, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+      - name: Flatten release assets
+        run: |
+          mkdir -p flat
+          find release-assets -type f -exec cp {} flat/ \;
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: BELVON SHOP 1.0.0
+          body: |
+            BELVON SHOP 1.0.0
+
+            Cross-platform release artifacts:
+            - Windows
+            - Android APK
+            - macOS
+            - iOS unsigned build preparation
+
+            iOS requires Apple signing/provisioning for installation on a physical device.
+          files: flat/*
+          make_latest: true
