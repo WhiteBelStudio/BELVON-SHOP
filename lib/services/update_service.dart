@@ -14,7 +14,7 @@ class UpdateInfo {
 }
 
 class UpdateService {
-  static const currentVersion = '1.1.0';
+  static const currentVersion = '1.2.0';
   static const releaseApi =
       'https://api.github.com/repos/WhiteBelStudio/BELVON-SHOP/releases/latest';
 
