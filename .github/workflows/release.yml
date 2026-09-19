@@ -59,12 +59,12 @@ jobs:
           @"
           [Setup]
           AppName=BELVON SHOP
-          AppVersion=1.2.1
+          AppVersion=1.3.0
           AppPublisher=WhiteBelStudio
           DefaultDirName={autopf}\BELVON SHOP
           DefaultGroupName=BELVON SHOP
           OutputDir=.
-          OutputBaseFilename=BELVON-SHOP-Windows-Setup-1.2.1
+          OutputBaseFilename=BELVON-SHOP-Windows-Setup-1.3.0
           Compression=lzma
           SolidCompression=yes
           ArchitecturesInstallIn64BitMode=x64compatible
@@ -85,7 +85,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: BELVON-SHOP-Windows-Installer
-          path: BELVON-SHOP-Windows-Setup-1.2.1.exe
+          path: BELVON-SHOP-Windows-Setup-1.3.0.exe
 
   macos:
     name: macOS installer
@@ -107,11 +107,11 @@ jobs:
           mkdir -p dmg-root
           cp -R build/macos/Build/Products/Release/belvon_shop.app "dmg-root/BELVON SHOP.app"
           ln -s /Applications "dmg-root/Applications"
-          hdiutil create -volname "BELVON SHOP" -srcfolder dmg-root -ov -format UDZO BELVON-SHOP-macOS-Installer-1.2.1.dmg
+          hdiutil create -volname "BELVON SHOP" -srcfolder dmg-root -ov -format UDZO BELVON-SHOP-macOS-Installer-1.3.0.dmg
       - uses: actions/upload-artifact@v4
         with:
           name: BELVON-SHOP-macOS-Installer
-          path: BELVON-SHOP-macOS-Installer-1.2.1.dmg
+          path: BELVON-SHOP-macOS-Installer-1.3.0.dmg
 
   ios:
     name: iOS IPA package
@@ -133,14 +133,14 @@ jobs:
           rm -rf Payload
           mkdir Payload
           cp -R build/ios/iphoneos/Runner.app Payload/BELVON\ SHOP.app
-          zip -r BELVON-SHOP-iOS-unsigned-1.2.1.ipa Payload
+          zip -r BELVON-SHOP-iOS-unsigned-1.3.0.ipa Payload
       - uses: actions/upload-artifact@v4
         with:
           name: BELVON-SHOP-iOS-IPA
-          path: BELVON-SHOP-iOS-unsigned-1.2.1.ipa
+          path: BELVON-SHOP-iOS-unsigned-1.3.0.ipa
 
   release:
-    name: Publish BELVON SHOP 1.2.1
+    name: Publish BELVON SHOP 1.3.0
     needs: [android, windows, macos, ios]
     runs-on: ubuntu-latest
     steps:
@@ -154,16 +154,15 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.2.1
-          name: BELVON SHOP 1.2.1
+          tag_name: v1.3.0
+          name: BELVON SHOP 1.3.0
           body: |
-            BELVON SHOP 1.2.1
+            BELVON SHOP 1.3.0
 
-            Installer-focused cross-platform release:
-            - Windows: BELVON-SHOP-Windows-Setup-1.2.1.exe
-            - Android: app-release.apk
-            - macOS: BELVON-SHOP-macOS-Installer-1.2.1.dmg
-            - iOS: unsigned IPA package
+            Security release:
+            - Owner login uses primary password + additional owner password.
+            - Owner login IP address and user-agent are recorded in the owner audit log.
+            - Cross-platform installers are built for Windows, Android, macOS and iOS package preparation.
 
             Windows and macOS are distributed as native installers/packages.
             iOS IPA is unsigned and requires Apple signing/provisioning before installation on a physical device.
