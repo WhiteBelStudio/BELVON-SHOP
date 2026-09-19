@@ -15,7 +15,13 @@ async def get_pool():
             await conn.execute('ALTER TABLE users ADD COLUMN IF NOT EXISTS blocked BOOLEAN NOT NULL DEFAULT FALSE')
             await conn.execute('ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ')
             await conn.execute('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check')
-            await conn.execute("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('customer','admin','owner'))")
+            await conn.execute("""
+                DO $ BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='users_role_check') THEN
+                        ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('customer','admin','owner'));
+                    END IF;
+                END $;
+            """)
             await conn.execute('''
                 CREATE TABLE IF NOT EXISTS audit_logs (
                     id BIGSERIAL PRIMARY KEY,
