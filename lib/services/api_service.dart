@@ -67,6 +67,22 @@ class ApiService {
     return decoded;
   }
 
+  static Future<AuthUser> ownerLogin(String email, String password, String secondPassword) async {
+    final data = await request(
+      'POST',
+      '/auth/owner-login',
+      body: {
+        'email': email,
+        'password': password,
+        'second_password': secondPassword,
+      },
+      auth: false,
+    ) as Map<String, dynamic>;
+    final user = AuthUser.fromJson(data['user'] as Map<String, dynamic>);
+    await AuthService.save(data['access_token'] as String, user);
+    return user;
+  }
+
   static Future<Map<String, dynamic>> secureLogin(String email, String password) async {
     return await request(
       'POST',
