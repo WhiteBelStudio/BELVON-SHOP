@@ -173,7 +173,7 @@ class _ShopPageState extends State<ShopPage> {
             ]),
             Text(p.category),
             const SizedBox(height: 5),
-            Text(p.price.toStringAsFixed(0) + ' ₽', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
+            Text('${p.price.toStringAsFixed(0)} ₽', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
           ]),
         ),
       ),
@@ -190,7 +190,7 @@ class _ShopPageState extends State<ShopPage> {
         const SizedBox(height: 8),
         Text(p.description),
         const SizedBox(height: 14),
-        Text(p.price.toStringAsFixed(0) + ' ₽', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+        Text('${p.price.toStringAsFixed(0)} ₽', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
         const SizedBox(height: 18),
         SizedBox(
           width: double.infinity,
@@ -222,12 +222,12 @@ class _ShopPageState extends State<ShopPage> {
           else ...[
             ...products.where((p) => cart.containsKey(p.id)).map((p) => ListTile(
               title: Text(p.name),
-              subtitle: Text(p.price.toStringAsFixed(0) + ' ₽ × ' + cart[p.id].toString()),
+              subtitle: Text('${p.price.toStringAsFixed(0)} ₽ × ${cart[p.id]}'),
               trailing: IconButton(onPressed: () => setState(() => cart.remove(p.id)), icon: const Icon(Icons.delete_outline)),
             )),
             Align(
               alignment: Alignment.centerRight,
-              child: Text('Итого: ' + cartTotal.toStringAsFixed(0) + ' ₽', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+              child: Text('Итого: ${cartTotal.toStringAsFixed(0)} ₽', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
             ),
             const SizedBox(height: 14),
             SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Оформить заказ'))),
