@@ -157,15 +157,33 @@ async def bootstrap_owner(data: BootstrapIn):
             raise HTTPException(409, 'Владелец уже создан')
 
         row = await conn.fetchrow(
-            '''INSERT INTO users(email,password_hash,role)
-               VALUES($1,$2,'owner')
-               ON CONFLICT(email) DO UPDATE SET role='owner',password_hash=EXCLUDED.password_hash,blocked=FALSE
+            '''INSERT INTO users(email,password_hash,role,last_login_at)
+               VALUES($1,$2,'owner',NOW())
+               ON CONFLICT(email) DO UPDATE SET
+                   role='owner',
+                   password_hash=EXCLUDED.password_hash,
+                   blocked=FALSE,
+                   last_login_at=NOW()
                RETURNING id,email,role,blocked''',
             configured_email,
             hash_password(configured_password),
         )
 
-    return {'access_token': token_for(row['id'], row['role']), 'user': dict(row)}
+        await conn.execute(
+            '''INSERT INTO audit_logs(admin_id,action,target_type,target_id,details)
+               VALUES($1,$2,$3,$4,$5)''',
+            row['id'],
+            'owner.bootstrap',
+            'owner',
+            row['id'],
+            'Owner account initialized through bootstrap-owner',
+        )
+
+    return {
+        'status': 'created',
+        'access_token': token_for(row['id'], row['role']),
+        'user': dict(row),
+    }
 
 
 @router.get('/me')
