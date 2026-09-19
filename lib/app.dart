@@ -69,7 +69,12 @@ class _AuthPageState extends State<AuthPage> {
     try {
       if (registerMode) {
         await ApiService.register(email.text.trim(), password.text);
-        if (mounted) setState(() {});
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const ShopPage()),
+            (route) => false,
+          );
+        }
         return;
       }
 
@@ -79,7 +84,12 @@ class _AuthPageState extends State<AuthPage> {
           password.text,
           secondPassword.text,
         );
-        if (mounted) setState(() {});
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const ShopPage()),
+            (route) => false,
+          );
+        }
         return;
       }
 
@@ -92,7 +102,12 @@ class _AuthPageState extends State<AuthPage> {
       if (status == 'approved') {
         final user = AuthUser.fromJson(result['user'] as Map<String, dynamic>);
         await AuthService.save(result['access_token'] as String, user);
-        if (mounted) setState(() {});
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const ShopPage()),
+            (route) => false,
+          );
+        }
         return;
       }
 
@@ -128,7 +143,12 @@ class _AuthPageState extends State<AuthPage> {
         if (status == 'approved') {
           final user = AuthUser.fromJson(result['user'] as Map<String, dynamic>);
           await AuthService.save(result['access_token'] as String, user);
-          if (mounted) setState(() => pendingRequestId = null);
+          if (mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const ShopPage()),
+              (route) => false,
+            );
+          }
           return;
         }
 
