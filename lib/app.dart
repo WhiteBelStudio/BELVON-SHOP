@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'data/products.dart';
 import 'models/product.dart';
+import 'services/update_service.dart';
 
 class BelvonApp extends StatelessWidget {
   const BelvonApp({super.key});
@@ -141,9 +142,87 @@ class _ShopPageState extends State<ShopPage> {
       Card(child: Column(children: [
         ListTile(leading: const Icon(Icons.receipt_long), title: const Text('Мои заказы'), trailing: const Icon(Icons.chevron_right), onTap: () {}),
         ListTile(leading: const Icon(Icons.settings_outlined), title: const Text('Настройки'), trailing: const Icon(Icons.chevron_right), onTap: () {}),
+        ListTile(
+          leading: const Icon(Icons.system_update_rounded),
+          title: const Text('Обновление приложения'),
+          subtitle: const Text('Проверить новую версию'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: checkForUpdate,
+        ),
       ])),
     ],
   );
+
+  Future<void> checkForUpdate() async {
+    if (!mounted) return;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final update = await UpdateService.checkForUpdate();
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+
+      if (update == null) {
+        await showDialog<void>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Обновлений нет'),
+            content: Text('Установлена последняя версия ${UpdateService.currentVersion}.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      final open = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: Text('Доступна версия ${update.version}'),
+          content: const Text('Откройте страницу релиза, чтобы установить обновление для вашей платформы.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Позже'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Обновить'),
+            ),
+          ],
+        ),
+      );
+
+      if (open == true) {
+        await UpdateService.openRelease(update.url);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      await showDialog<void>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Не удалось проверить обновления'),
+          content: const Text('Проверьте подключение к интернету и попробуйте ещё раз.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
 
   Widget productCard(Product p) {
     final liked = favorites.contains(p.id);
