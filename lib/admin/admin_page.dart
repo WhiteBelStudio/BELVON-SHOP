@@ -270,7 +270,7 @@ class _AdminPageState extends State<AdminPage> {
       const Text('Отзывы и модерация', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
       const SizedBox(height: 14),
       ...reviews.map((r) => Card(child: ListTile(
-        title: Text('${r['product_name']} • ${'★' * ((r['rating'] as num).toInt())}'),
+        title: Text('${r['product_name']} • ${List.filled((r['rating'] as num).toInt(), '★').join()}'),
         subtitle: Text('${r['email']}\n${r['text'] ?? ''}'),
         isThreeLine: true,
         trailing: r['approved'] == true
