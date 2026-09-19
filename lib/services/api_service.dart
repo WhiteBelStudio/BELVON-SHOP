@@ -20,9 +20,11 @@ class ApiService {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
     };
+
     if (auth && AuthService.token != null) {
       headers['Authorization'] = 'Bearer ${AuthService.token}';
     }
+
     headers['X-Device-ID'] = AuthService.deviceId;
     headers['X-Device-Name'] = 'BELVON SHOP';
 
@@ -67,23 +69,22 @@ class ApiService {
     return decoded;
   }
 
-  static Future<AuthUser> ownerLogin(String email, String password, String secondPassword) async {
-    final data = await request(
-      'POST',
-      '/auth/owner-login',
-      body: {
-        'email': email,
-        'password': password,
-        'second_password': secondPassword,
-      },
-      auth: false,
-    ) as Map<String, dynamic>;
-    final user = AuthUser.fromJson(data['user'] as Map<String, dynamic>);
-    await AuthService.save(data['access_token'] as String, user);
-    return user;
+  static Future<AuthUser> ownerLogin(
+    String email,
+    String password,
+    String secondPassword,
+  ) async {
+    return _login('/auth/owner-login', {
+      'email': email,
+      'password': password,
+      'second_password': secondPassword,
+    });
   }
 
-  static Future<Map<String, dynamic>> secureLogin(String email, String password) async {
+  static Future<Map<String, dynamic>> secureLogin(
+    String email,
+    String password,
+  ) async {
     return await request(
       'POST',
       '/auth/login-secure',
@@ -104,21 +105,28 @@ class ApiService {
       body: {'email': email, 'password': password},
       auth: false,
     ) as Map<String, dynamic>;
+
     final user = AuthUser.fromJson(data['user'] as Map<String, dynamic>);
     await AuthService.save(data['access_token'] as String, user);
     return user;
   }
 
   static Future<Map<String, dynamic>> deviceStatus(String requestId) async {
-    return await request('GET', '/auth/device-status/$requestId', auth: false)
-        as Map<String, dynamic>;
+    return await request(
+      'GET',
+      '/auth/device-status/$requestId',
+      auth: false,
+    ) as Map<String, dynamic>;
   }
 
   static Future<List<dynamic>> deviceRequests() async {
     return await request('GET', '/auth/device-requests') as List<dynamic>;
   }
 
-  static Future<void> decideDeviceRequest(String requestId, bool approved) async {
+  static Future<void> decideDeviceRequest(
+    String requestId,
+    bool approved,
+  ) async {
     await request(
       'POST',
       '/auth/device-requests/$requestId/decision',
@@ -130,18 +138,6 @@ class ApiService {
     return _login('/auth/login', {
       'email': email,
       'password': password,
-    });
-  }
-
-  static Future<AuthUser> ownerLogin(
-    String email,
-    String password,
-    String secondPassword,
-  ) async {
-    return _login('/auth/owner-login', {
-      'email': email,
-      'password': password,
-      'second_password': secondPassword,
     });
   }
 
