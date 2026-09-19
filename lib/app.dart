@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'data/products.dart';
 import 'models/product.dart';
@@ -23,8 +25,275 @@ class BelvonApp extends StatelessWidget {
         indicatorColor: Color(0xFF28213F),
       ),
     ),
-    home: const ShopPage(),
+    home: const AuthGate(),
   );
+}
+
+
+
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    if (AuthService.user == null) {
+      return const AuthPage();
+    }
+    return const ShopPage();
+  }
+}
+
+class AuthPage extends StatefulWidget {
+  const AuthPage({super.key});
+
+  @override
+  State<AuthPage> createState() => _AuthPageState();
+}
+
+class _AuthPageState extends State<AuthPage> {
+  final email = TextEditingController();
+  final password = TextEditingController();
+  final secondPassword = TextEditingController();
+  bool registerMode = false;
+  bool ownerMode = false;
+  bool busy = false;
+  String? error;
+  String? pendingRequestId;
+
+  Future<void> submit() async {
+    setState(() {
+      busy = true;
+      error = null;
+    });
+
+    try {
+      if (registerMode) {
+        await ApiService.register(email.text.trim(), password.text);
+        if (mounted) setState(() {});
+        return;
+      }
+
+      if (ownerMode) {
+        await ApiService.ownerLogin(
+          email.text.trim(),
+          password.text,
+          secondPassword.text,
+        );
+        if (mounted) setState(() {});
+        return;
+      }
+
+      final result = await ApiService.secureLogin(
+        email.text.trim(),
+        password.text,
+      );
+      final status = result['status']?.toString();
+
+      if (status == 'approved') {
+        final user = AuthUser.fromJson(result['user'] as Map<String, dynamic>);
+        await AuthService.save(result['access_token'] as String, user);
+        if (mounted) setState(() {});
+        return;
+      }
+
+      if (status == 'pending') {
+        pendingRequestId = result['request_id']?.toString();
+        setState(() => busy = false);
+        await waitForApproval();
+        return;
+      }
+
+      throw Exception('Не удалось определить состояние входа');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        busy = false;
+        error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  Future<void> waitForApproval() async {
+    final requestId = pendingRequestId;
+    if (requestId == null) return;
+
+    for (var i = 0; i < 30; i++) {
+      await Future<void>.delayed(const Duration(seconds: 5));
+      if (!mounted) return;
+
+      try {
+        final result = await ApiService.deviceStatus(requestId);
+        final status = result['status']?.toString();
+
+        if (status == 'approved') {
+          final user = AuthUser.fromJson(result['user'] as Map<String, dynamic>);
+          await AuthService.save(result['access_token'] as String, user);
+          if (mounted) setState(() => pendingRequestId = null);
+          return;
+        }
+
+        if (status == 'denied') {
+          setState(() {
+            busy = false;
+            pendingRequestId = null;
+            error = 'Вход отклонён на доверенном устройстве.';
+          });
+          return;
+        }
+
+        if (status == 'expired') {
+          setState(() {
+            busy = false;
+            pendingRequestId = null;
+            error = 'Запрос на вход истёк. Попробуйте ещё раз.';
+          });
+          return;
+        }
+      } catch (_) {
+        // Network interruptions are retried until the request expires.
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        busy = false;
+        pendingRequestId = null;
+        error = 'Не удалось получить подтверждение вовремя.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = registerMode ? 'Создать аккаунт' : ownerMode ? 'Вход владельца' : 'Вход';
+    return Scaffold(
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(26),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(22),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
+                        ),
+                      ),
+                      child: const Icon(Icons.shopping_bag_rounded, size: 36),
+                    ),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'BELVON SHOP',
+                      style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      pendingRequestId == null
+                          ? 'Безопасный вход в приложение'
+                          : 'Ожидаем подтверждение на доверенном устройстве',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                    const SizedBox(height: 24),
+                    TextField(
+                      controller: email,
+                      enabled: pendingRequestId == null && !busy,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        prefixIcon: Icon(Icons.email_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: password,
+                      enabled: pendingRequestId == null && !busy,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Пароль',
+                        prefixIcon: Icon(Icons.lock_outline),
+                      ),
+                    ),
+                    if (ownerMode && !registerMode) ...[
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: secondPassword,
+                        enabled: pendingRequestId == null && !busy,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Дополнительный пароль владельца',
+                          prefixIcon: Icon(Icons.shield_outlined),
+                        ),
+                      ),
+                    ],
+                    if (error != null) ...[
+                      const SizedBox(height: 14),
+                      Text(
+                        error!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      ),
+                    ],
+                    if (pendingRequestId != null) ...[
+                      const SizedBox(height: 18),
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Откройте BELVON SHOP на уже авторизованном устройстве и подтвердите этот вход.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                    if (pendingRequestId == null) ...[
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: busy ? null : submit,
+                          child: Text(busy ? 'Проверяем...' : title),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: busy
+                            ? null
+                            : () => setState(() {
+                                  registerMode = !registerMode;
+                                  ownerMode = false;
+                                  error = null;
+                                }),
+                        child: Text(
+                          registerMode ? 'У меня уже есть аккаунт' : 'Создать новый аккаунт',
+                        ),
+                      ),
+                      if (!registerMode)
+                        TextButton(
+                          onPressed: busy
+                              ? null
+                              : () => setState(() {
+                                    ownerMode = !ownerMode;
+                                    error = null;
+                                  }),
+                          child: Text(
+                            ownerMode ? 'Обычный вход' : 'Вход владельца',
+                          ),
+                        ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class ShopPage extends StatefulWidget {
@@ -35,6 +304,54 @@ class ShopPage extends StatefulWidget {
 
 class _ShopPageState extends State<ShopPage> {
   int tab = 0;
+  Timer? approvalTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    if (AuthService.user?.isAdmin == true) {
+      approvalTimer = Timer.periodic(const Duration(seconds: 6), (_) => checkDeviceRequests());
+      Future<void>.delayed(const Duration(seconds: 2), checkDeviceRequests);
+    }
+  }
+
+  @override
+  void dispose() {
+    approvalTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> checkDeviceRequests() async {
+    if (!mounted || AuthService.user == null) return;
+    try {
+      final requests = await ApiService.deviceRequests();
+      if (!mounted || requests.isEmpty) return;
+      final request = requests.first as Map<String, dynamic>;
+      final id = request['id']?.toString();
+      if (id == null) return;
+      final approved = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Новый вход'),
+          content: Text(
+            'Запрос на вход с нового устройства.\\n\\nУстройство: ${request['device_name'] ?? 'Неизвестно'}',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Отклонить'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Разрешить'),
+            ),
+          ],
+        ),
+      );
+      if (approved != null) await ApiService.decideDeviceRequest(id, approved);
+    } catch (_) {}
+  }
   String category = 'Все';
   String query = '';
   final favorites = <int>{};
@@ -256,7 +573,12 @@ class _ShopPageState extends State<ShopPage> {
                   title: const Text('Выйти'),
                   onTap: () async {
                     await AuthService.logout();
-                    if (mounted) setState(() {});
+                    if (mounted) {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const AuthPage()),
+                        (route) => false,
+                      );
+                    }
                   },
                 ),
             ],
