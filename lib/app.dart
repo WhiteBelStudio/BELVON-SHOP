@@ -16,8 +16,12 @@ class BelvonApp extends StatelessWidget {
     theme: ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: const Color(0xFF08090D),
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF7C5CFF), brightness: Brightness.dark),
+      scaffoldBackgroundColor: const Color(0xFF07080C),
+      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF8B5CF6), brightness: Brightness.dark),
+      navigationBarTheme: const NavigationBarThemeData(
+        backgroundColor: Color(0xFF0B0C11),
+        indicatorColor: Color(0xFF28213F),
+      ),
     ),
     home: const ShopPage(),
   );
@@ -54,7 +58,23 @@ class _ShopPageState extends State<ShopPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('BELVON SHOP', style: TextStyle(fontWeight: FontWeight.w900)),
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      title: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)]),
+            ),
+            child: const Icon(Icons.shopping_bag_rounded, size: 21),
+          ),
+          const SizedBox(width: 11),
+          const Text('BELVON', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+        ],
+      ),
       actions: [
         IconButton(onPressed: () => setState(() => tab = 1), icon: const Icon(Icons.favorite_rounded)),
         Badge(
@@ -80,8 +100,45 @@ class _ShopPageState extends State<ShopPage> {
   Widget catalog() => CustomScrollView(
     slivers: [
       SliverToBoxAdapter(
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            gradient: const LinearGradient(
+              colors: [Color(0xFF21143D), Color(0xFF101A2C), Color(0xFF0D0F16)],
+            ),
+          ),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('BELVON SHOP', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+                    SizedBox(height: 10),
+                    Text('Выбирай своё.', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900)),
+                    SizedBox(height: 7),
+                    Text('Современный каталог и быстрый заказ.', style: TextStyle(color: Colors.white70)),
+                  ],
+                ),
+              ),
+              Container(
+                width: 68,
+                height: 68,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)]),
+                ),
+                child: const Icon(Icons.auto_awesome_rounded, size: 32),
+              ),
+            ],
+          ),
+        ),
+      ),
+      SliverToBoxAdapter(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
           child: TextField(
             onChanged: (v) => setState(() => query = v),
             decoration: InputDecoration(
@@ -367,7 +424,7 @@ class _ShopPageState extends State<ShopPage> {
               Expanded(child: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17))),
               IconButton(
                 onPressed: () => setState(() => liked ? favorites.remove(p.id) : favorites.add(p.id)),
-                icon: Icon(liked ? Icons.favorite : Icons.favorite_border),
+                icon: Icon(liked ? Icons.favorite_rounded : Icons.favorite_border_rounded),
               ),
             ]),
             Text(p.category),
