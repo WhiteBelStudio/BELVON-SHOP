@@ -66,10 +66,32 @@ class ApiService {
   }
 
   static Future<AuthUser> login(String email, String password) async {
+    return _login('/auth/login', {
+      'email': email,
+      'password': password,
+    });
+  }
+
+  static Future<AuthUser> ownerLogin(
+    String email,
+    String password,
+    String secondPassword,
+  ) async {
+    return _login('/auth/owner-login', {
+      'email': email,
+      'password': password,
+      'second_password': secondPassword,
+    });
+  }
+
+  static Future<AuthUser> _login(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
     final data = await request(
       'POST',
-      '/auth/login',
-      body: {'email': email, 'password': password},
+      path,
+      body: body,
       auth: false,
     ) as Map<String, dynamic>;
 
