@@ -31,14 +31,19 @@ class ApiService {
     switch (method) {
       case 'GET':
         response = await http.get(uri, headers: headers);
+        break;
       case 'POST':
         response = await http.post(uri, headers: headers, body: encoded);
+        break;
       case 'PATCH':
         response = await http.patch(uri, headers: headers, body: encoded);
+        break;
       case 'PUT':
         response = await http.put(uri, headers: headers, body: encoded);
+        break;
       case 'DELETE':
         response = await http.delete(uri, headers: headers);
+        break;
       default:
         throw Exception('Unsupported method');
     }
