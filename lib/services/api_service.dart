@@ -25,7 +25,6 @@ class ApiService {
     }
     headers['X-Device-ID'] = AuthService.deviceId;
     headers['X-Device-Name'] = 'BELVON SHOP';
-    }
 
     final uri = Uri.parse('$baseUrl$path');
     late http.Response response;
