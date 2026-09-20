@@ -5,10 +5,19 @@ import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 
 class ApiService {
-  static const baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://localhost:8000',
-  );
+  static const baseUrl = String.fromEnvironment('API_BASE_URL');
+
+  static Uri _uri(String path) {
+    if (baseUrl.isEmpty) {
+      throw const ApiConfigurationException(
+        'Production API is not configured. Set API_BASE_URL when building BELVON SHOP.',
+      );
+    }
+    final normalized = baseUrl.endsWith('/')
+        ? baseUrl.substring(0, baseUrl.length - 1)
+        : baseUrl;
+    return Uri.parse('$normalized$path');
+  }
 
   static Future<dynamic> request(
     String method,
@@ -28,28 +37,32 @@ class ApiService {
     headers['X-Device-ID'] = AuthService.deviceId;
     headers['X-Device-Name'] = 'BELVON SHOP';
 
-    final uri = Uri.parse('$baseUrl$path');
+    final uri = _uri(path);
     late http.Response response;
     final encoded = body == null ? null : jsonEncode(body);
 
-    switch (method) {
-      case 'GET':
-        response = await http.get(uri, headers: headers);
-        break;
-      case 'POST':
-        response = await http.post(uri, headers: headers, body: encoded);
-        break;
-      case 'PATCH':
-        response = await http.patch(uri, headers: headers, body: encoded);
-        break;
-      case 'PUT':
-        response = await http.put(uri, headers: headers, body: encoded);
-        break;
-      case 'DELETE':
-        response = await http.delete(uri, headers: headers);
-        break;
-      default:
-        throw Exception('Unsupported method');
+    try {
+      switch (method) {
+        case 'GET':
+          response = await http.get(uri, headers: headers);
+          break;
+        case 'POST':
+          response = await http.post(uri, headers: headers, body: encoded);
+          break;
+        case 'PATCH':
+          response = await http.patch(uri, headers: headers, body: encoded);
+          break;
+        case 'PUT':
+          response = await http.put(uri, headers: headers, body: encoded);
+          break;
+        case 'DELETE':
+          response = await http.delete(uri, headers: headers);
+          break;
+        default:
+          throw Exception('Unsupported method');
+      }
+    } on Exception catch (e) {
+      throw Exception('Не удалось подключиться к BELVON SHOP API: $e');
     }
 
     dynamic decoded;
@@ -156,4 +169,12 @@ class ApiService {
     await AuthService.save(data['access_token'] as String, user);
     return user;
   }
+}
+
+class ApiConfigurationException implements Exception {
+  final String message;
+  const ApiConfigurationException(this.message);
+
+  @override
+  String toString() => message;
 }
