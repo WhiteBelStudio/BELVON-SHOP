@@ -1,7 +1,7 @@
 name: belvon_shop
 description: BELVON SHOP cross-platform application.
 publish_to: "none"
-version: 1.3.2+7
+version: 1.3.3+8
 
 environment:
   sdk: ">=3.5.0 <4.0.0"
