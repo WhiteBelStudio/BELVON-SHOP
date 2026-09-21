@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 env:
-  APP_VERSION: 1.3.2
+  APP_VERSION: 1.3.3
   API_BASE_URL: https://belvonshop-c08vk0tne-neon-messenger-4294.vercel.app
 
 jobs:
@@ -24,7 +24,7 @@ jobs:
           channel: stable
           cache: true
       - name: Validate production API configuration
-        run: test -n "$API_BASE_URL" && echo "Production API configured" || (echo "BELVON_API_URL repository variable is required" && exit 1)
+        run: test -n "$API_BASE_URL" && echo "Production API configured" || (echo "Production API URL is required" && exit 1)
       - name: Generate Flutter platform files
         run: flutter create --platforms=android .
       - name: Restore project test files
@@ -51,7 +51,7 @@ jobs:
           cache: true
       - name: Validate production API configuration
         shell: pwsh
-        run: if (-not $env:API_BASE_URL) { throw "BELVON_API_URL repository variable is required" }
+        run: if (-not $env:API_BASE_URL) { throw "Production API URL is required" }
       - name: Generate Flutter platform files
         run: flutter create --platforms=windows .
       - name: Get dependencies
@@ -70,12 +70,12 @@ jobs:
           @"
           [Setup]
           AppName=BELVON SHOP
-          AppVersion=1.3.2
+          AppVersion=1.3.3
           AppPublisher=WhiteBelStudio
           DefaultDirName={autopf}\BELVON SHOP
           DefaultGroupName=BELVON SHOP
           OutputDir=.
-          OutputBaseFilename=BELVON-SHOP-Windows-Setup-1.3.2
+          OutputBaseFilename=BELVON-SHOP-Windows-Setup-1.3.3
           Compression=lzma2
           SolidCompression=yes
           ArchitecturesInstallIn64BitMode=x64compatible
@@ -95,71 +95,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: BELVON-SHOP-Windows-Installer
-          path: BELVON-SHOP-Windows-Setup-1.3.2.exe
-
-  macos:
-    name: macOS installer
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-      - name: Validate production API configuration
-        run: test -n "$API_BASE_URL" && echo "Production API configured" || (echo "BELVON_API_URL repository variable is required" && exit 1)
-      - name: Generate Flutter platform files
-        run: flutter create --platforms=macos .
-      - name: Get dependencies
-        run: flutter pub get
-      - name: Analyze
-        run: flutter analyze
-      - name: Build macOS
-        run: flutter build macos --release --dart-define=API_BASE_URL="$API_BASE_URL"
-      - name: Create macOS DMG installer
-        run: |
-          mkdir -p dmg-root
-          cp -R build/macos/Build/Products/Release/belvon_shop.app "dmg-root/BELVON SHOP.app"
-          ln -s /Applications "dmg-root/Applications"
-          hdiutil create -volname "BELVON SHOP" -srcfolder dmg-root -ov -format UDZO BELVON-SHOP-macOS-Installer-1.3.2.dmg
-      - uses: actions/upload-artifact@v4
-        with:
-          name: BELVON-SHOP-macOS-Installer
-          path: BELVON-SHOP-macOS-Installer-1.3.2.dmg
-
-  ios:
-    name: iOS IPA package
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-      - name: Validate production API configuration
-        run: test -n "$API_BASE_URL" && echo "Production API configured" || (echo "BELVON_API_URL repository variable is required" && exit 1)
-      - name: Generate Flutter platform files
-        run: flutter create --platforms=ios .
-      - name: Get dependencies
-        run: flutter pub get
-      - name: Analyze
-        run: flutter analyze
-      - name: Prepare unsigned iOS release
-        run: flutter build ios --release --no-codesign --dart-define=API_BASE_URL="$API_BASE_URL"
-      - name: Create unsigned IPA package
-        run: |
-          rm -rf Payload
-          mkdir Payload
-          cp -R build/ios/iphoneos/Runner.app Payload/BELVON\ SHOP.app
-          zip -r BELVON-SHOP-iOS-unsigned-1.3.2.ipa Payload
-      - uses: actions/upload-artifact@v4
-        with:
-          name: BELVON-SHOP-iOS-IPA
-          path: BELVON-SHOP-iOS-unsigned-1.3.2.ipa
+          path: BELVON-SHOP-Windows-Setup-1.3.3.exe
 
   release:
-    name: Publish BELVON SHOP 1.3.2
-    needs: [android, windows, macos, ios]
+    name: Publish BELVON SHOP 1.3.3
+    needs: [android, windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -172,15 +112,15 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.3.2
-          name: BELVON SHOP 1.3.2
+          tag_name: v1.3.3
+          name: BELVON SHOP 1.3.3
           body: |
-            BELVON SHOP 1.3.2
+            BELVON SHOP 1.3.3
 
-            Production release:
-            - API endpoint is injected at build time; localhost fallback removed.
-            - Registration and authentication use the configured production API.
-            - Cross-platform installers are built only when BELVON_API_URL is configured.
-            - Windows installer, Android APK, macOS DMG and unsigned iOS IPA package are generated.
+            Production Windows + Android cycle:
+            - Production API endpoint is injected at build time.
+            - localhost is not used for production builds.
+            - Registration and authentication use the production API.
+            - Windows installer and Android APK are generated.
           files: flat/*
           make_latest: true
