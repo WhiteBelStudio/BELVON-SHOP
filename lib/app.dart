@@ -322,6 +322,8 @@ class _ShopPageState extends State<ShopPage> {
   int tab = 0;
   Timer? approvalTimer;
 
+  void openTab(int index) => setState(() => tab = index);
+
   @override
   void initState() {
     super.initState();
@@ -411,7 +413,7 @@ class _ShopPageState extends State<ShopPage> {
         ],
       ),
       actions: [
-        IconButton(onPressed: () => setState(() => tab = 1), icon: const Icon(Icons.favorite_rounded)),
+        IconButton(onPressed: () => openTab(2), icon: const Icon(Icons.favorite_rounded)),
         Badge(
           isLabelVisible: cartCount > 0,
           label: Text(cartCount.toString()),
@@ -428,6 +430,7 @@ class _ShopPageState extends State<ShopPage> {
             onDestinationSelected: (v) => setState(() => tab = v),
             labelType: NavigationRailLabelType.all,
             destinations: const [
+              NavigationRailDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: Text('Главная')),
               NavigationRailDestination(icon: Icon(Icons.storefront_outlined), selectedIcon: Icon(Icons.storefront), label: Text('Каталог')),
               NavigationRailDestination(icon: Icon(Icons.favorite_border), selectedIcon: Icon(Icons.favorite), label: Text('Избранное')),
               NavigationRailDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: Text('Профиль')),
@@ -451,7 +454,7 @@ class _ShopPageState extends State<ShopPage> {
             ),
             child: KeyedSubtree(
               key: ValueKey(tab),
-              child: tab == 0 ? catalog() : tab == 1 ? favoritesPage() : profile(),
+              child: tab == 0 ? home() : tab == 1 ? catalog() : tab == 2 ? favoritesPage() : profile(),
             ),
           ),
         ),
@@ -461,12 +464,189 @@ class _ShopPageState extends State<ShopPage> {
       selectedIndex: tab,
       onDestinationSelected: (v) => setState(() => tab = v),
       destinations: const [
+        NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Главная'),
         NavigationDestination(icon: Icon(Icons.storefront_outlined), selectedIcon: Icon(Icons.storefront), label: 'Каталог'),
         NavigationDestination(icon: Icon(Icons.favorite_border), selectedIcon: Icon(Icons.favorite), label: 'Избранное'),
         NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Профиль'),
       ],
     ),
   );
+  }
+
+  Widget home() {
+    final wide = MediaQuery.sizeOf(context).width >= 900;
+    final user = AuthService.user;
+    return BelvonResponsive(
+      mobile: _homeContent(wide: false, userEmail: user?.email),
+      desktop: _homeContent(wide: true, userEmail: user?.email),
+    );
+  }
+
+  Widget _homeContent({required bool wide, String? userEmail}) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(wide ? 28 : 16, 8, wide ? 28 : 16, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          BelvonCard(
+            padding: EdgeInsets.zero,
+            child: Container(
+              constraints: BoxConstraints(minHeight: wide ? 270 : 300),
+              padding: EdgeInsets.all(wide ? 34 : 24),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF241449), Color(0xFF141D36), Color(0xFF0E1017)],
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: .08),
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: const Text('BELVON • APP', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1.1)),
+                        ),
+                        const SizedBox(height: 18),
+                        Text(
+                          userEmail == null ? 'Добро пожаловать.' : 'С возвращением.',
+                          style: TextStyle(fontSize: wide ? 38 : 31, height: 1.05, fontWeight: FontWeight.w900),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Главный экран BELVON — быстрый доступ к каталогу, избранному и профилю.',
+                          style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.45),
+                        ),
+                        const SizedBox(height: 22),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            FilledButton.icon(
+                              onPressed: () => openTab(1),
+                              icon: const Icon(Icons.storefront_rounded),
+                              label: const Text('Открыть каталог'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: () => openTab(2),
+                              icon: const Icon(Icons.favorite_border_rounded),
+                              label: const Text('Избранное'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (wide) ...[
+                    const SizedBox(width: 30),
+                    Container(
+                      width: 190,
+                      height: 190,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)]),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF8B5CF6).withValues(alpha: .22),
+                            blurRadius: 55,
+                            spreadRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.auto_awesome_rounded, size: 76),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 22),
+          const Text('Быстрый доступ', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 12),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = constraints.maxWidth >= 900 ? 4 : constraints.maxWidth >= 560 ? 2 : 1;
+              return GridView.count(
+                crossAxisCount: columns,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: wide ? 1.7 : 2.1,
+                children: [
+                  _homeAction(icon: Icons.storefront_rounded, title: 'Каталог', subtitle: 'Все доступные разделы', onTap: () => openTab(1)),
+                  _homeAction(icon: Icons.favorite_rounded, title: 'Избранное', subtitle: favorites.isEmpty ? 'Пока ничего нет' : '${favorites.length} сохранено', onTap: () => openTab(2)),
+                  _homeAction(icon: Icons.person_rounded, title: 'Профиль', subtitle: userEmail ?? 'Войти или создать аккаунт', onTap: () => openTab(3)),
+                  _homeAction(icon: Icons.system_update_rounded, title: 'Обновления', subtitle: 'Проверить версию приложения', onTap: checkForUpdate),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 22),
+          const BelvonCard(
+            child: Row(
+              children: [
+                Icon(Icons.auto_awesome_rounded, size: 30),
+                SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    'Единый стиль, плавные переходы и адаптация под Windows и Android.',
+                    style: TextStyle(color: Colors.white70, height: 1.35),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _homeAction({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return BelvonCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: const Color(0x332A1D4D),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded),
+        ],
+      ),
+    );
   }
 
   Widget catalog() => BelvonResponsive(
