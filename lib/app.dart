@@ -8,6 +8,8 @@ import 'services/auth_service.dart';
 import 'services/api_service.dart';
 import 'admin/admin_page.dart';
 import 'theme/app_theme.dart';
+import 'widgets/belvon_card.dart';
+import 'widgets/belvon_states.dart';
 
 class BelvonApp extends StatelessWidget {
   const BelvonApp({super.key});
@@ -385,7 +387,9 @@ class _ShopPageState extends State<ShopPage> {
   });
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final wide = MediaQuery.sizeOf(context).width >= 900;
+    return Scaffold(
     appBar: AppBar(
       elevation: 0,
       backgroundColor: Colors.transparent,
@@ -414,8 +418,25 @@ class _ShopPageState extends State<ShopPage> {
         const SizedBox(width: 8),
       ],
     ),
-    body: IndexedStack(index: tab, children: [catalog(), favoritesPage(), profile()]),
-    bottomNavigationBar: NavigationBar(
+    body: Row(
+      children: [
+        if (wide)
+          NavigationRail(
+            selectedIndex: tab,
+            onDestinationSelected: (v) => setState(() => tab = v),
+            labelType: NavigationRailLabelType.all,
+            destinations: const [
+              NavigationRailDestination(icon: Icon(Icons.storefront_outlined), selectedIcon: Icon(Icons.storefront), label: Text('Каталог')),
+              NavigationRailDestination(icon: Icon(Icons.favorite_border), selectedIcon: Icon(Icons.favorite), label: Text('Избранное')),
+              NavigationRailDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: Text('Профиль')),
+            ],
+          ),
+        Expanded(
+          child: IndexedStack(index: tab, children: [catalog(), favoritesPage(), profile()]),
+        ),
+      ],
+    ),
+    bottomNavigationBar: wide ? null : NavigationBar(
       selectedIndex: tab,
       onDestinationSelected: (v) => setState(() => tab = v),
       destinations: const [
@@ -425,6 +446,7 @@ class _ShopPageState extends State<ShopPage> {
       ],
     ),
   );
+  }
 
   Widget catalog() => CustomScrollView(
     slivers: [
@@ -510,7 +532,11 @@ class _ShopPageState extends State<ShopPage> {
 
   Widget favoritesPage() {
     final list = products.where((p) => favorites.contains(p.id)).toList();
-    if (list.isEmpty) return const Center(child: Text('В избранном пока ничего нет'));
+    if (list.isEmpty) return const BelvonEmptyState(
+      icon: Icons.favorite_border_rounded,
+      title: 'В избранном пока пусто',
+      message: 'Добавленные элементы появятся здесь.',
+    );
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
