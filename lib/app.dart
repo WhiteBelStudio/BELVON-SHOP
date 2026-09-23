@@ -7,6 +7,7 @@ import 'services/update_service.dart';
 import 'services/auth_service.dart';
 import 'services/api_service.dart';
 import 'admin/admin_page.dart';
+import 'theme/app_theme.dart';
 
 class BelvonApp extends StatelessWidget {
   const BelvonApp({super.key});
@@ -15,16 +16,7 @@ class BelvonApp extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
     title: 'BELVON SHOP',
     debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: const Color(0xFF07080C),
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF8B5CF6), brightness: Brightness.dark),
-      navigationBarTheme: const NavigationBarThemeData(
-        backgroundColor: Color(0xFF0B0C11),
-        indicatorColor: Color(0xFF28213F),
-      ),
-    ),
+    theme: AppTheme.dark(),
     home: const AuthGate(),
   );
 }
