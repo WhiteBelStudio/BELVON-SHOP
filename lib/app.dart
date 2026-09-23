@@ -558,11 +558,13 @@ class _ShopPageState extends State<ShopPage> {
 
   Widget favoritesPage() {
     final list = products.where((p) => favorites.contains(p.id)).toList();
-    if (list.isEmpty) return const BelvonEmptyState(
-      icon: Icons.favorite_border_rounded,
-      title: 'В избранном пока пусто',
-      message: 'Добавленные элементы появятся здесь.',
-    );
+    if (list.isEmpty) {
+      return const BelvonEmptyState(
+        icon: Icons.favorite_border_rounded,
+        title: 'В избранном пока пусто',
+        message: 'Добавленные элементы появятся здесь.',
+      );
+    }
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
