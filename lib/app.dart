@@ -432,7 +432,26 @@ class _ShopPageState extends State<ShopPage> {
             ],
           ),
         Expanded(
-          child: IndexedStack(index: tab, children: [catalog(), favoritesPage(), profile()]),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 280),
+            reverseDuration: const Duration(milliseconds: 180),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0.025, 0),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            ),
+            child: KeyedSubtree(
+              key: ValueKey(tab),
+              child: tab == 0 ? catalog() : tab == 1 ? favoritesPage() : profile(),
+            ),
+          ),
         ),
       ],
     ),
@@ -763,34 +782,78 @@ class _ShopPageState extends State<ShopPage> {
 
   Widget productCard(Product p) {
     final liked = favorites.contains(p.id);
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => showProduct(p),
+
+    return BelvonCard(
+      onTap: () => showProduct(p),
+      padding: EdgeInsets.zero,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
         child: Padding(
           padding: const EdgeInsets.all(14),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  gradient: const LinearGradient(colors: [Color(0xFF242638), Color(0xFF101116)]),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 260),
+                  curve: Curves.easeOutCubic,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF242638), Color(0xFF101116)],
+                    ),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.shopping_bag_outlined, size: 58),
+                  ),
                 ),
-                child: const Center(child: Icon(Icons.shopping_bag_outlined, size: 58)),
               ),
-            ),
-            const SizedBox(height: 10),
-            Row(children: [
-              Expanded(child: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17))),
-              IconButton(
-                onPressed: () => setState(() => liked ? favorites.remove(p.id) : favorites.add(p.id)),
-                icon: Icon(liked ? Icons.favorite_rounded : Icons.favorite_border_rounded),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      p.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 17,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: liked ? 'Убрать из избранного' : 'Добавить в избранное',
+                    onPressed: () => setState(
+                      () => liked
+                          ? favorites.remove(p.id)
+                          : favorites.add(p.id),
+                    ),
+                    icon: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 180),
+                      transitionBuilder: (child, animation) =>
+                          ScaleTransition(scale: animation, child: child),
+                      child: Icon(
+                        liked
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        key: ValueKey(liked),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ]),
-            Text(p.category),
-            const SizedBox(height: 5),
-            Text('${p.price.toStringAsFixed(0)} ₽', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
-          ]),
+              Text(p.category),
+              const SizedBox(height: 5),
+              Text(
+                '${p.price.toStringAsFixed(0)} ₽',
+                style: const TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
