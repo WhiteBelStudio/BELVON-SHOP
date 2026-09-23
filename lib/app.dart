@@ -474,7 +474,6 @@ class _ShopPageState extends State<ShopPage> {
   }
 
   Widget home() {
-    final wide = MediaQuery.sizeOf(context).width >= 900;
     final user = AuthService.user;
     return BelvonResponsive(
       mobile: _homeContent(wide: false, userEmail: user?.email),
