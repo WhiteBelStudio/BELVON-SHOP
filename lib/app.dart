@@ -10,6 +10,8 @@ import 'admin/admin_page.dart';
 import 'theme/app_theme.dart';
 import 'widgets/belvon_card.dart';
 import 'widgets/belvon_states.dart';
+import 'widgets/belvon_responsive.dart';
+import 'theme/app_dimensions.dart';
 
 class BelvonApp extends StatelessWidget {
   const BelvonApp({super.key});
@@ -467,7 +469,12 @@ class _ShopPageState extends State<ShopPage> {
   );
   }
 
-  Widget catalog() => CustomScrollView(
+  Widget catalog() => BelvonResponsive(
+    mobile: _catalogGrid(),
+    desktop: _catalogGrid(),
+  );
+
+  Widget _catalogGrid() => CustomScrollView(
     slivers: [
       SliverToBoxAdapter(
         child: Container(
@@ -537,10 +544,10 @@ class _ShopPageState extends State<ShopPage> {
         ),
       ),
       SliverPadding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppDimensions.pagePadding),
         sliver: SliverGrid.builder(
           gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: 380, mainAxisExtent: 330, crossAxisSpacing: 14, mainAxisSpacing: 14,
+            maxCrossAxisExtent: 380, mainAxisExtent: 330, crossAxisSpacing: AppDimensions.gridGap, mainAxisSpacing: AppDimensions.gridGap,
           ),
           itemCount: filtered.length,
           itemBuilder: (_, i) => productCard(filtered[i]),
