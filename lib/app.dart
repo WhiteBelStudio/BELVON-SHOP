@@ -591,6 +591,48 @@ class _ShopPageState extends State<ShopPage> {
             },
           ),
           const SizedBox(height: 22),
+          const SizedBox(height: 22),
+          const Text(
+            'Состояние приложения',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 12),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = constraints.maxWidth >= 900 ? 3 : constraints.maxWidth >= 560 ? 2 : 1;
+              final cards = [
+                _homeStatus(
+                  icon: Icons.devices_rounded,
+                  title: 'Мультиплатформа',
+                  subtitle: wide ? 'Windows • адаптивный интерфейс' : 'Android • адаптивный интерфейс',
+                ),
+                _homeStatus(
+                  icon: Icons.favorite_rounded,
+                  title: 'Избранное',
+                  subtitle: favorites.isEmpty ? 'Нет сохранённых элементов' : '${favorites.length} сохранено',
+                ),
+                _homeStatus(
+                  icon: Icons.system_update_rounded,
+                  title: 'Версия',
+                  subtitle: UpdateService.currentVersion,
+                  onTap: checkForUpdate,
+                ),
+              ];
+              return GridView.builder(
+                itemCount: cards.length,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  mainAxisExtent: 112,
+                ),
+                itemBuilder: (_, index) => cards[index],
+              );
+            },
+          ),
+          const SizedBox(height: 22),
           const BelvonCard(
             child: Row(
               children: [
@@ -605,6 +647,49 @@ class _ShopPageState extends State<ShopPage> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _homeStatus({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    VoidCallback? onTap,
+  }) {
+    return BelvonCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: const Color(0x332A1D4D),
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: Icon(icon),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 5),
+                Text(
+                  subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          if (onTap != null) const Icon(Icons.chevron_right_rounded),
         ],
       ),
     );
