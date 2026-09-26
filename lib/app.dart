@@ -732,92 +732,185 @@ class _ShopPageState extends State<ShopPage> {
     );
   }
 
-  Widget catalog() => BelvonResponsive(
-    mobile: _catalogGrid(),
-    desktop: _catalogGrid(),
+  Widget catalog() => CustomScrollView(
+    slivers: [
+      SliverToBoxAdapter(child: _catalogHeader()),
+      SliverToBoxAdapter(child: _catalogSearch()),
+      SliverToBoxAdapter(child: _catalogFilters()),
+      SliverToBoxAdapter(child: _catalogSummary()),
+      if (filtered.isEmpty)
+        const SliverFillRemaining(
+          hasScrollBody: false,
+          child: BelvonEmptyState(
+            icon: Icons.search_off_rounded,
+            title: 'Ничего не найдено',
+            message: 'Попробуйте изменить запрос или выбрать другую категорию.',
+          ),
+        )
+      else
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(
+            AppDimensions.pagePadding,
+            4,
+            AppDimensions.pagePadding,
+            28,
+          ),
+          sliver: SliverGrid.builder(
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 380,
+              mainAxisExtent: 330,
+              crossAxisSpacing: AppDimensions.gridGap,
+              mainAxisSpacing: AppDimensions.gridGap,
+            ),
+            itemCount: filtered.length,
+            itemBuilder: (_, i) => productCard(filtered[i]),
+          ),
+        ),
+    ],
   );
 
-  Widget _catalogGrid() => CustomScrollView(
-    slivers: [
-      SliverToBoxAdapter(
+  Widget _catalogHeader() {
+    final wide = MediaQuery.sizeOf(context).width >= 700;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(wide ? 24 : 16, 8, wide ? 24 : 16, 12),
+      child: BelvonCard(
+        padding: EdgeInsets.zero,
         child: Container(
-          margin: const EdgeInsets.fromLTRB(16, 6, 16, 12),
-          padding: const EdgeInsets.all(22),
+          constraints: BoxConstraints(minHeight: wide ? 190 : 210),
+          padding: EdgeInsets.all(wide ? 28 : 22),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
             gradient: const LinearGradient(
-              colors: [Color(0xFF21143D), Color(0xFF101A2C), Color(0xFF0D0F16)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF241449),
+                Color(0xFF141D36),
+                Color(0xFF0E1017),
+              ],
             ),
           ),
           child: Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('BELVON SHOP', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
-                    SizedBox(height: 10),
-                    Text('Выбирай своё.', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900)),
-                    SizedBox(height: 7),
-                    Text('Современный каталог и быстрый заказ.', style: TextStyle(color: Colors.white70)),
+                    const Text(
+                      'BELVON SHOP • КАТАЛОГ',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Каталог',
+                      style: TextStyle(
+                        fontSize: wide ? 36 : 30,
+                        height: 1.05,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Поиск, категории и избранное — всё в одном месте.',
+                      style: TextStyle(color: Colors.white70, height: 1.4),
+                    ),
                   ],
                 ),
               ),
-              Container(
-                width: 68,
-                height: 68,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)]),
+              if (wide) ...[
+                const SizedBox(width: 20),
+                Container(
+                  width: 76,
+                  height: 76,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
+                    ),
+                  ),
+                  child: const Icon(Icons.storefront_rounded, size: 36),
                 ),
-                child: const Icon(Icons.auto_awesome_rounded, size: 32),
-              ),
+              ],
             ],
           ),
         ),
       ),
-      SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
-          child: TextField(
-            onChanged: (v) => setState(() => query = v),
-            decoration: InputDecoration(
-              hintText: 'Поиск по каталогу',
-              prefixIcon: const Icon(Icons.search),
-              filled: true,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
+    );
+  }
+
+  Widget _catalogSearch() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: TextField(
+        onChanged: (value) => setState(() => query = value),
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          hintText: 'Поиск по названию и описанию',
+          prefixIcon: const Icon(Icons.search_rounded),
+          suffixIcon: query.trim().isEmpty
+              ? null
+              : IconButton(
+                  tooltip: 'Очистить поиск',
+                  onPressed: () => setState(() => query = ''),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _catalogFilters() {
+    return SizedBox(
+      height: 52,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        scrollDirection: Axis.horizontal,
+        itemCount: categories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, index) {
+          final value = categories[index];
+          return ChoiceChip(
+            label: Text(value),
+            selected: category == value,
+            onSelected: (_) => setState(() => category = value),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _catalogSummary() {
+    final count = filtered.length;
+    final activeSearch = query.trim().isNotEmpty;
+    final filterLabel = category == 'Все' ? 'Все категории' : category;
+    final label = activeSearch
+        ? 'Найдено: $count • $filterLabel'
+        : '$count элементов • $filterLabel';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 180),
+        child: Align(
+          key: ValueKey('$query|$category|$count'),
+          alignment: Alignment.centerLeft,
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white60,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
       ),
-      SliverToBoxAdapter(
-        child: SizedBox(
-          height: 54,
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            scrollDirection: Axis.horizontal,
-            itemCount: categories.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (_, i) => ChoiceChip(
-              label: Text(categories[i]),
-              selected: category == categories[i],
-              onSelected: (_) => setState(() => category = categories[i]),
-            ),
-          ),
-        ),
-      ),
-      SliverPadding(
-        padding: const EdgeInsets.all(AppDimensions.pagePadding),
-        sliver: SliverGrid.builder(
-          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: 380, mainAxisExtent: 330, crossAxisSpacing: AppDimensions.gridGap, mainAxisSpacing: AppDimensions.gridGap,
-          ),
-          itemCount: filtered.length,
-          itemBuilder: (_, i) => productCard(filtered[i]),
-        ),
-      ),
-    ],
-  );
+    );
+  }
 
   Widget favoritesPage() {
     final list = products.where((p) => favorites.contains(p.id)).toList();
