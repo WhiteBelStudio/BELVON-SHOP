@@ -336,6 +336,8 @@ class _ShopPageState extends State<ShopPage> {
   @override
   void dispose() {
     approvalTimer?.cancel();
+    searchController.dispose();
+    searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -372,16 +374,48 @@ class _ShopPageState extends State<ShopPage> {
   }
   String category = 'Все';
   String query = '';
+  final searchController = TextEditingController();
+  final searchFocusNode = FocusNode();
+  final recentSearches = <String>[];
   final favorites = <int>{};
   final cart = <int, int>{};
 
   List<String> get categories => ['Все', ...{for (final p in products) p.category}];
 
+  String _normalizeSearch(String value) => value
+      .trim()
+      .toLowerCase()
+      .replaceAll(RegExp(r'\s+'), ' ');
+
   List<Product> get filtered => products.where((p) {
-    final q = query.trim().toLowerCase();
+    final q = _normalizeSearch(query);
     return (category == 'Все' || p.category == category) &&
       (q.isEmpty || p.name.toLowerCase().contains(q) || p.description.toLowerCase().contains(q));
   }).toList();
+
+  void _setSearch(String value, {bool remember = false}) {
+    final normalized = _normalizeSearch(value);
+    searchController.value = TextEditingValue(
+      text: normalized,
+      selection: TextSelection.collapsed(offset: normalized.length),
+    );
+    setState(() => query = normalized);
+    if (remember && normalized.isNotEmpty) {
+      setState(() {
+        recentSearches.remove(normalized);
+        recentSearches.insert(0, normalized);
+        if (recentSearches.length > 5) recentSearches.removeLast();
+      });
+    }
+  }
+
+  void openSearch() {
+    if (tab != 1) setState(() => tab = 1);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      searchFocusNode.requestFocus();
+    });
+  }
 
   int get cartCount => cart.values.fold(0, (a, b) => a + b);
 
@@ -413,6 +447,11 @@ class _ShopPageState extends State<ShopPage> {
         ],
       ),
       actions: [
+        IconButton(
+          tooltip: 'Поиск',
+          onPressed: openSearch,
+          icon: const Icon(Icons.search_rounded),
+        ),
         IconButton(onPressed: () => openTab(2), icon: const Icon(Icons.favorite_rounded)),
         Badge(
           isLabelVisible: cartCount > 0,
@@ -844,22 +883,59 @@ class _ShopPageState extends State<ShopPage> {
   }
 
   Widget _catalogSearch() {
+    final hasQuery = _normalizeSearch(query).isNotEmpty;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-      child: TextField(
-        onChanged: (value) => setState(() => query = value),
-        textInputAction: TextInputAction.search,
-        decoration: InputDecoration(
-          hintText: 'Поиск по названию и описанию',
-          prefixIcon: const Icon(Icons.search_rounded),
-          suffixIcon: query.trim().isEmpty
-              ? null
-              : IconButton(
-                  tooltip: 'Очистить поиск',
-                  onPressed: () => setState(() => query = ''),
-                  icon: const Icon(Icons.close_rounded),
-                ),
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: searchController,
+            focusNode: searchFocusNode,
+            onChanged: (value) => setState(() => query = value),
+            onSubmitted: (value) {
+              _setSearch(value, remember: true);
+              searchFocusNode.unfocus();
+            },
+            textInputAction: TextInputAction.search,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: InputDecoration(
+              hintText: 'Найти товар по названию или описанию',
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: !hasQuery
+                  ? null
+                  : IconButton(
+                      tooltip: 'Очистить поиск',
+                      onPressed: () {
+                        searchController.clear();
+                        setState(() => query = '');
+                        searchFocusNode.requestFocus();
+                      },
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+            ),
+          ),
+          if (!hasQuery && recentSearches.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 34,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: recentSearches.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (_, index) {
+                  final value = recentSearches[index];
+                  return ActionChip(
+                    avatar: const Icon(Icons.history_rounded, size: 16),
+                    label: Text(value),
+                    onPressed: () => _setSearch(value),
+                  );
+                },
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -886,7 +962,7 @@ class _ShopPageState extends State<ShopPage> {
 
   Widget _catalogSummary() {
     final count = filtered.length;
-    final activeSearch = query.trim().isNotEmpty;
+    final activeSearch = _normalizeSearch(query).isNotEmpty;
     final filterLabel = category == 'Все' ? 'Все категории' : category;
     final label = activeSearch
         ? 'Найдено: $count • $filterLabel'
