@@ -591,7 +591,6 @@ class _ShopPageState extends State<ShopPage> {
             },
           ),
           const SizedBox(height: 22),
-          const SizedBox(height: 22),
           const Text(
             'Состояние приложения',
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
@@ -604,7 +603,7 @@ class _ShopPageState extends State<ShopPage> {
                 _homeStatus(
                   icon: Icons.devices_rounded,
                   title: 'Мультиплатформа',
-                  subtitle: wide ? 'Windows • адаптивный интерфейс' : 'Android • адаптивный интерфейс',
+                  subtitle: wide ? 'Большой экран • адаптивный интерфейс' : 'Мобильный экран • адаптивный интерфейс',
                 ),
                 _homeStatus(
                   icon: Icons.favorite_rounded,
@@ -640,7 +639,7 @@ class _ShopPageState extends State<ShopPage> {
                 SizedBox(width: 14),
                 Expanded(
                   child: Text(
-                    'Единый стиль, плавные переходы и адаптация под Windows и Android.',
+                    'Единый стиль, плавные переходы и адаптивная компоновка на разных экранах.',
                     style: TextStyle(color: Colors.white70, height: 1.35),
                   ),
                 ),
