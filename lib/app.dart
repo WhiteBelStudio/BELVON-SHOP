@@ -13,6 +13,95 @@ import 'widgets/belvon_states.dart';
 import 'widgets/belvon_responsive.dart';
 import 'theme/app_dimensions.dart';
 
+
+class ProductDetailsPage extends StatelessWidget {
+  final Product product;
+  final bool liked;
+  final VoidCallback onToggleFavorite;
+
+  const ProductDetailsPage({super.key, required this.product, required this.liked, required this.onToggleFavorite});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Товар'),
+        actions: [
+          IconButton(
+            tooltip: liked ? 'Убрать из избранного' : 'Добавить в избранное',
+            onPressed: onToggleFavorite,
+            icon: Icon(liked ? Icons.favorite_rounded : Icons.favorite_border_rounded),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1100),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final wide = constraints.maxWidth >= 760;
+                final preview = _preview();
+                final info = _info();
+                return wide
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 6, child: preview),
+                          const SizedBox(width: 24),
+                          Expanded(flex: 5, child: info),
+                        ],
+                      )
+                    : Column(children: [preview, const SizedBox(height: 20), info]);
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _preview() => AspectRatio(
+        aspectRatio: 1.05,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF242638), Color(0xFF101116)],
+            ),
+            border: Border.all(color: const Color(0x22FFFFFF)),
+          ),
+          child: const Center(child: Icon(Icons.shopping_bag_outlined, size: 92)),
+        ),
+      );
+
+  Widget _info() => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(product.category.toUpperCase(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1.1, color: Colors.white60)),
+          const SizedBox(height: 10),
+          Text(product.name, style: const TextStyle(fontSize: 34, height: 1.05, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 14),
+          Text(product.description, style: const TextStyle(fontSize: 16, height: 1.5, color: Colors.white70)),
+          const SizedBox(height: 22),
+          Text('${product.price.toStringAsFixed(0)} ₽', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 22),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onToggleFavorite,
+              icon: Icon(liked ? Icons.favorite_rounded : Icons.favorite_border_rounded),
+              label: Text(liked ? 'В избранном' : 'Добавить в избранное'),
+            ),
+          ),
+        ],
+      );
+}
+
+
 class BelvonApp extends StatelessWidget {
   const BelvonApp({super.key});
 
@@ -1300,32 +1389,26 @@ class _ShopPageState extends State<ShopPage> {
     );
   }
 
-  void showProduct(Product p) => showModalBottomSheet(
-    context: context,
-    showDragHandle: true,
-    builder: (_) => Padding(
-      padding: const EdgeInsets.all(22),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(p.name, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 8),
-        Text(p.description),
-        const SizedBox(height: 14),
-        Text('${p.price.toStringAsFixed(0)} ₽', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 18),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: () {
-              setState(() => cart[p.id] = (cart[p.id] ?? 0) + 1);
-              Navigator.pop(context);
-            },
-            icon: const Icon(Icons.add_shopping_cart),
-            label: const Text('Добавить в корзину'),
-          ),
+  Future<void> showProduct(Product p) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ProductDetailsPage(
+          product: p,
+          liked: favorites.contains(p.id),
+          onToggleFavorite: () {
+            setState(() {
+              if (favorites.contains(p.id)) {
+                favorites.remove(p.id);
+              } else {
+                favorites.add(p.id);
+              }
+            });
+          },
         ),
-      ]),
-    ),
-  );
+      ),
+    );
+    if (mounted) setState(() {});
+  }
 
   void showCart() => showModalBottomSheet(
     context: context,
