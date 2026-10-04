@@ -51,16 +51,24 @@ class ApiService {
           response = await http.get(uri, headers: headers).timeout(_timeout);
           break;
         case 'POST':
-          response = await http.post(uri, headers: headers, body: encoded).timeout(_timeout);
+          response = await http
+              .post(uri, headers: headers, body: encoded)
+              .timeout(_timeout);
           break;
         case 'PATCH':
-          response = await http.patch(uri, headers: headers, body: encoded).timeout(_timeout);
+          response = await http
+              .patch(uri, headers: headers, body: encoded)
+              .timeout(_timeout);
           break;
         case 'PUT':
-          response = await http.put(uri, headers: headers, body: encoded).timeout(_timeout);
+          response = await http
+              .put(uri, headers: headers, body: encoded)
+              .timeout(_timeout);
           break;
         case 'DELETE':
-          response = await http.delete(uri, headers: headers).timeout(_timeout);
+          response = await http
+              .delete(uri, headers: headers)
+              .timeout(_timeout);
           break;
         default:
           throw Exception('Unsupported method');
@@ -86,12 +94,15 @@ class ApiService {
     return decoded;
   }
 
-
   static Future<bool> healthCheck() async {
     if (!isConfigured) return false;
     try {
       final data = await request('GET', '/health/live', auth: false);
-      return data is Map ? (data['status']?.toString().toLowerCase() == 'ok' || data['healthy'] == true || data['status'] == 200) : true;
+      return data is Map
+          ? (data['status']?.toString().toLowerCase() == 'ok' ||
+              data['healthy'] == true ||
+              data['status'] == 200)
+          : true;
     } catch (_) {
       return false;
     }
@@ -99,8 +110,11 @@ class ApiService {
 
   static Future<List<Product>> fetchProducts() async {
     final data = await request('GET', '/catalog/products', auth: false);
-    final raw = data is Map<String, dynamic> ? data['items'] ?? data['products'] : data;
-    if (raw is! List) throw const FormatException('Некорректный ответ каталога.');
+    final raw =
+        data is Map<String, dynamic> ? data['items'] ?? data['products'] : data;
+    if (raw is! List) {
+      throw const FormatException('Некорректный ответ каталога.');
+    }
     return raw
         .whereType<Map>()
         .map((item) => Product.fromJson(Map<String, dynamic>.from(item)))
@@ -110,8 +124,8 @@ class ApiService {
   static Future<AuthUser> fetchCurrentUser() async {
     final data = await request('GET', '/auth/me');
     final raw = data is Map<String, dynamic> && data['user'] is Map
-        ? data['user'] as Map
-        : data as Map<String, dynamic>;
+        ? Map<String, dynamic>.from(data['user'] as Map)
+        : Map<String, dynamic>.from(data as Map);
     return AuthUser.fromJson(raw);
   }
 
