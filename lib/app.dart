@@ -1798,33 +1798,300 @@ class _ShopPageState extends State<ShopPage> {
     if (mounted) setState(() {});
   }
 
-  void showCart() => showModalBottomSheet(
-    context: context,
-    showDragHandle: true,
-    isScrollControlled: true,
-    builder: (_) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('Корзина', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 12),
-          if (cart.isEmpty)
-            const Padding(padding: EdgeInsets.all(20), child: Text('Корзина пуста'))
-          else ...[
-            ...products.where((p) => cart.containsKey(p.id)).map((p) => ListTile(
-              title: Text(p.name),
-              subtitle: Text('${p.price.toStringAsFixed(0)} ₽ × ${cart[p.id]}'),
-              trailing: IconButton(onPressed: () => setState(() => cart.remove(p.id)), icon: const Icon(Icons.delete_outline)),
-            )),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Text('Итого: ${cartTotal.toStringAsFixed(0)} ₽', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-            ),
-            const SizedBox(height: 14),
-            SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Оформить заказ'))),
-          ],
-        ]),
+  Future<void> showCart() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CartPage(
+          cart: cart,
+          products: products,
+          total: cartTotal,
+          onChanged: (id, quantity) {
+            setState(() {
+              if (quantity <= 0) {
+                cart.remove(id);
+              } else {
+                cart[id] = quantity;
+              }
+            });
+          },
+          onClear: () => setState(cart.clear),
+        ),
       ),
-    ),
-  );
+    );
+    if (mounted) setState(() {});
+  }
+}
+
+class CartPage extends StatelessWidget {
+  final Map<int, int> cart;
+  final List<Product> products;
+  final double total;
+  final void Function(int id, int quantity) onChanged;
+  final VoidCallback onClear;
+
+  const CartPage({
+    super.key,
+    required this.cart,
+    required this.products,
+    required this.total,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final items = products.where((p) => cart.containsKey(p.id)).toList();
+    final wide = MediaQuery.sizeOf(context).width >= 800;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Корзина'),
+        actions: [
+          if (items.isNotEmpty)
+            TextButton.icon(
+              onPressed: () {
+                onClear();
+                Navigator.pop(context);
+              },
+              icon: const Icon(Icons.delete_sweep_outlined),
+              label: const Text('Очистить'),
+            ),
+        ],
+      ),
+      body: items.isEmpty
+          ? const BelvonEmptyState(
+              icon: Icons.shopping_bag_outlined,
+              title: 'Корзина пуста',
+              message: 'Добавленные элементы появятся здесь.',
+            )
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+              children: [
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1000),
+                    child: Column(
+                      children: [
+                        ...items.map((p) {
+                          final quantity = cart[p.id] ?? 0;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: BelvonCard(
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: wide ? 84 : 68,
+                                    height: wide ? 84 : 68,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(18),
+                                      gradient: const LinearGradient(
+                                        colors: [Color(0xFF242638), Color(0xFF101116)],
+                                      ),
+                                    ),
+                                    child: const Icon(Icons.shopping_bag_outlined, size: 32),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(p.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                                        const SizedBox(height: 4),
+                                        Text(p.category, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                                        const SizedBox(height: 6),
+                                        Text('${p.price.toStringAsFixed(0)} ₽', style: const TextStyle(fontWeight: FontWeight.w800)),
+                                      ],
+                                    ),
+                                  ),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        tooltip: 'Уменьшить',
+                                        onPressed: () => onChanged(p.id, quantity - 1),
+                                        icon: const Icon(Icons.remove_circle_outline_rounded),
+                                      ),
+                                      Text('$quantity', style: const TextStyle(fontWeight: FontWeight.w900)),
+                                      IconButton(
+                                        tooltip: 'Увеличить',
+                                        onPressed: () => onChanged(p.id, quantity + 1),
+                                        icon: const Icon(Icons.add_circle_outline_rounded),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
+                        const SizedBox(height: 6),
+                        BelvonCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Text('Итог', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                              const SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Количество'),
+                                  Text('${cart.values.fold<int>(0, (a, b) => a + b)}'),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Сумма', style: TextStyle(fontWeight: FontWeight.w800)),
+                                  Text('${total.toStringAsFixed(0)} ₽', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              FilledButton.icon(
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => CheckoutPage(
+                                      items: items,
+                                      quantities: Map<int, int>.from(cart),
+                                      total: total,
+                                    ),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.arrow_forward_rounded),
+                                label: const Text('Перейти к проверке'),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Это предварительный экран проверки выбранных элементов. Финальное оформление покупки в этой версии не выполняется.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.35),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+class CheckoutPage extends StatelessWidget {
+  final List<Product> items;
+  final Map<int, int> quantities;
+  final double total;
+
+  const CheckoutPage({
+    super.key,
+    required this.items,
+    required this.quantities,
+    required this.total,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Проверка')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        children: [
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 760),
+              child: Column(
+                children: [
+                  BelvonCard(
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            color: const Color(0x332A1D4D),
+                          ),
+                          child: const Icon(Icons.fact_check_outlined),
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Проверка выбранных элементов', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                              SizedBox(height: 4),
+                              Text('Проверьте состав и количество перед продолжением.', style: TextStyle(color: Colors.white60)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  BelvonCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        ...items.map((p) => ListTile(
+                          leading: const Icon(Icons.shopping_bag_outlined),
+                          title: Text(p.name),
+                          subtitle: Text('${p.price.toStringAsFixed(0)} ₽ × ${quantities[p.id] ?? 0}'),
+                          trailing: Text(
+                            '${(p.price * (quantities[p.id] ?? 0)).toStringAsFixed(0)} ₽',
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                        )),
+                        const Divider(height: 1),
+                        Padding(
+                          padding: const EdgeInsets.all(18),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Итого', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                              Text('${total.toStringAsFixed(0)} ₽', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  BelvonCard(
+                    child: Column(
+                      children: [
+                        const Icon(Icons.info_outline_rounded, size: 30),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Финальное оформление недоступно в текущей версии.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Этот экран завершает визуальный сценарий проверки корзины без запуска оплаты, заказа или передачи данных продавцу.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.white60, height: 1.4),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: null,
+                            icon: const Icon(Icons.lock_outline_rounded),
+                            label: const Text('Оформление недоступно'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
