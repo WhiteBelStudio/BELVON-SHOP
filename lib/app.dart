@@ -8,6 +8,7 @@ import 'services/auth_service.dart';
 import 'services/api_service.dart';
 import 'services/favorites_service.dart';
 import 'notifications/notifications_page.dart';
+import 'settings/settings_page.dart';
 import 'admin/admin_page.dart';
 import 'theme/app_theme.dart';
 import 'widgets/belvon_card.dart';
@@ -1470,7 +1471,14 @@ class _ShopPageState extends State<ShopPage> {
                         Icons.settings_outlined,
                         'Настройки',
                         'Параметры приложения',
-                        onTap: () {},
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const SettingsPage(),
+                            ),
+                          );
+                          if (mounted) setState(() {});
+                        },
                       ),
                       _profileTile(
                         Icons.system_update_rounded,
