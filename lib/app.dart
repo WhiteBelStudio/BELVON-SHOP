@@ -1178,80 +1178,345 @@ class _ShopPageState extends State<ShopPage> {
 
   Widget profile() {
     final user = AuthService.user;
+    final role = user?.isOwner == true
+        ? 'Владелец'
+        : user?.isAdmin == true
+            ? 'Администратор'
+            : 'Покупатель';
+    final initials = user?.email.isNotEmpty == true
+        ? user!.email.substring(0, 1).toUpperCase()
+        : 'G';
+
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
       children: [
-        CircleAvatar(radius: 42, child: Icon(user == null ? Icons.person : Icons.verified_user, size: 42)),
-        const SizedBox(height: 16),
         Center(
-          child: Text(
-            user?.email ?? 'Гость',
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
-          ),
-        ),
-        if (user != null) ...[
-          const SizedBox(height: 5),
-          Center(child: Text(user.isOwner ? 'Владелец' : user.isAdmin ? 'Администратор' : 'Покупатель')),
-        ],
-        const SizedBox(height: 20),
-        Card(
-          child: Column(
-            children: [
-              if (user == null)
-                ListTile(
-                  leading: const Icon(Icons.login_rounded),
-                  title: const Text('Войти в аккаунт'),
-                  subtitle: const Text('Авторизация для профиля и админ-панели'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: showLogin,
-                ),
-              if (user != null && user.isAdmin)
-                ListTile(
-                  leading: const Icon(Icons.admin_panel_settings_rounded),
-                  title: const Text('Админ-панель'),
-                  subtitle: Text(user.isOwner ? 'Полный доступ владельца' : 'Управление магазином'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const AdminPage()),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 900),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(28),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF1A1730), Color(0xFF11131B)],
+                    ),
+                    border: Border.all(color: const Color(0x22FFFFFF)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 76,
+                        height: 76,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          initials,
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user?.email ?? 'Гость',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 21,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Icon(
+                                  user == null
+                                      ? Icons.person_outline_rounded
+                                      : Icons.verified_rounded,
+                                  size: 17,
+                                ),
+                                const SizedBox(width: 7),
+                                Text(
+                                  user == null ? 'Не авторизован' : role,
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (user != null)
+                        IconButton(
+                          tooltip: 'Выйти',
+                          onPressed: _logoutFromProfile,
+                          icon: const Icon(Icons.logout_rounded),
+                        ),
+                    ],
                   ),
                 ),
-              ListTile(
-                leading: const Icon(Icons.receipt_long),
-                title: const Text('Мои заказы'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {},
-              ),
-              ListTile(
-                leading: const Icon(Icons.settings_outlined),
-                title: const Text('Настройки'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {},
-              ),
-              ListTile(
-                leading: const Icon(Icons.system_update_rounded),
-                title: const Text('Обновление приложения'),
-                subtitle: const Text('Проверить новую версию'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: checkForUpdate,
-              ),
-              if (user != null)
-                ListTile(
-                  leading: const Icon(Icons.logout_rounded),
-                  title: const Text('Выйти'),
-                  onTap: () async {
-                    await AuthService.logout();
-                    if (mounted) {
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (_) => const AuthPage()),
-                        (route) => false,
-                      );
-                    }
-                  },
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _profileStat(
+                        Icons.favorite_rounded,
+                        '${favorites.length}',
+                        'Избранное',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _profileStat(
+                        Icons.shopping_bag_outlined,
+                        '${products.length}',
+                        'В каталоге',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _profileStat(
+                        Icons.security_rounded,
+                        user == null ? 'Гость' : 'OK',
+                        'Безопасность',
+                      ),
+                    ),
+                  ],
                 ),
-            ],
+                const SizedBox(height: 16),
+                if (user == null)
+                  BelvonCard(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Войдите в аккаунт',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 7),
+                        const Text(
+                          'Синхронизируйте профиль и получите доступ к функциям аккаунта.',
+                          style: TextStyle(color: Colors.white70, height: 1.4),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: showLogin,
+                            icon: const Icon(Icons.login_rounded),
+                            label: const Text('Войти в аккаунт'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else ...[
+                  _profileSection(
+                    title: 'Аккаунт',
+                    children: [
+                      _profileTile(Icons.email_outlined, 'Email', user.email),
+                      _profileTile(Icons.badge_outlined, 'Роль', role),
+                      _profileTile(
+                        user.blocked
+                            ? Icons.block_rounded
+                            : Icons.verified_user_outlined,
+                        'Статус',
+                        user.blocked ? 'Аккаунт заблокирован' : 'Аккаунт активен',
+                        valueColor: user.blocked
+                            ? Colors.redAccent
+                            : Colors.greenAccent,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _profileSection(
+                    title: 'Быстрый доступ',
+                    children: [
+                      _profileTile(
+                        Icons.favorite_border_rounded,
+                        'Избранное',
+                        '${favorites.length} сохранённых',
+                        onTap: () => openTab(2),
+                      ),
+                      _profileTile(
+                        Icons.receipt_long_rounded,
+                        'Мои заказы',
+                        'История заказов',
+                        onTap: () {},
+                      ),
+                      if (user.isAdmin)
+                        _profileTile(
+                          Icons.admin_panel_settings_outlined,
+                          'Админ-панель',
+                          user.isOwner
+                              ? 'Полный доступ владельца'
+                              : 'Управление магазином',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const AdminPage(),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _profileSection(
+                    title: 'Приложение',
+                    children: [
+                      _profileTile(
+                        Icons.settings_outlined,
+                        'Настройки',
+                        'Параметры приложения',
+                        onTap: () {},
+                      ),
+                      _profileTile(
+                        Icons.system_update_rounded,
+                        'Обновление',
+                        'Версия ${UpdateService.currentVersion}',
+                        onTap: checkForUpdate,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  BelvonCard(
+                    padding: EdgeInsets.zero,
+                    child: ListTile(
+                      leading: const Icon(Icons.logout_rounded),
+                      title: const Text(
+                        'Выйти из аккаунта',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      subtitle: const Text(
+                        'Удалить текущую сессию на этом устройстве',
+                      ),
+                      onTap: _logoutFromProfile,
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _profileStat(IconData icon, String value, String label) {
+    return BelvonCard(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      child: Column(
+        children: [
+          Icon(icon, size: 22),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 11, color: Colors.white60),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _profileSection({
+    required String title,
+    required List<Widget> children,
+  }) {
+    return BelvonCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                letterSpacing: .6,
+                color: Colors.white60,
+              ),
+            ),
+          ),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _profileTile(
+    IconData icon,
+    String title,
+    String subtitle, {
+    VoidCallback? onTap,
+    Color? valueColor,
+  }) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+      subtitle: Text(
+        subtitle,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(color: valueColor ?? Colors.white60),
+      ),
+      trailing: onTap == null ? null : const Icon(Icons.chevron_right_rounded),
+      onTap: onTap,
+    );
+  }
+
+  Future<void> _logoutFromProfile() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Выйти из аккаунта?'),
+        content: const Text(
+          'Текущая сессия будет удалена с этого устройства.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Выйти'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    await AuthService.logout();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const AuthPage()),
+      (route) => false,
     );
   }
 
