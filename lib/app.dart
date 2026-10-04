@@ -143,10 +143,30 @@ class _AuthPageState extends State<AuthPage> {
   bool registerMode = false;
   bool ownerMode = false;
   bool busy = false;
+  bool obscurePassword = true;
+  bool obscureSecondPassword = true;
   String? error;
   String? pendingRequestId;
 
   Future<void> submit() async {
+    final emailValue = email.text.trim();
+    if (emailValue.isEmpty || !emailValue.contains('@')) {
+      setState(() => error = 'Введите корректный email.');
+      return;
+    }
+    if (password.text.length < 6) {
+      setState(() => error = 'Пароль должен содержать минимум 6 символов.');
+      return;
+    }
+    if (registerMode && password.text != secondPassword.text) {
+      setState(() => error = 'Пароли не совпадают.');
+      return;
+    }
+    if (ownerMode && secondPassword.text.isEmpty) {
+      setState(() => error = 'Введите дополнительный пароль владельца.');
+      return;
+    }
+
     setState(() {
       busy = true;
       error = null;
@@ -154,7 +174,7 @@ class _AuthPageState extends State<AuthPage> {
 
     try {
       if (registerMode) {
-        await ApiService.register(email.text.trim(), password.text);
+        await ApiService.register(emailValue, password.text);
         if (mounted) {
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (_) => const ShopPage()),
@@ -166,7 +186,7 @@ class _AuthPageState extends State<AuthPage> {
 
       if (ownerMode) {
         await ApiService.ownerLogin(
-          email.text.trim(),
+          emailValue,
           password.text,
           secondPassword.text,
         );
@@ -270,6 +290,14 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   @override
+  void dispose() {
+    email.dispose();
+    password.dispose();
+    secondPassword.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final title = registerMode ? 'Создать аккаунт' : ownerMode ? 'Вход владельца' : 'Вход';
     return Scaffold(
@@ -321,21 +349,48 @@ class _AuthPageState extends State<AuthPage> {
                     TextField(
                       controller: password,
                       enabled: pendingRequestId == null && !busy,
-                      obscureText: true,
-                      decoration: const InputDecoration(
+                      obscureText: obscurePassword,
+                      decoration: InputDecoration(
                         labelText: 'Пароль',
-                        prefixIcon: Icon(Icons.lock_outline),
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          tooltip: obscurePassword ? 'Показать пароль' : 'Скрыть пароль',
+                          onPressed: () => setState(() => obscurePassword = !obscurePassword),
+                          icon: Icon(obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                        ),
                       ),
                     ),
+                    if (registerMode) ...[
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: secondPassword,
+                        enabled: pendingRequestId == null && !busy,
+                        obscureText: obscureSecondPassword,
+                        decoration: InputDecoration(
+                          labelText: 'Повторите пароль',
+                          prefixIcon: const Icon(Icons.lock_reset_rounded),
+                          suffixIcon: IconButton(
+                            tooltip: obscureSecondPassword ? 'Показать пароль' : 'Скрыть пароль',
+                            onPressed: () => setState(() => obscureSecondPassword = !obscureSecondPassword),
+                            icon: Icon(obscureSecondPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                          ),
+                        ),
+                      ),
+                    ],
                     if (ownerMode && !registerMode) ...[
                       const SizedBox(height: 12),
                       TextField(
                         controller: secondPassword,
                         enabled: pendingRequestId == null && !busy,
-                        obscureText: true,
-                        decoration: const InputDecoration(
+                        obscureText: obscureSecondPassword,
+                        decoration: InputDecoration(
                           labelText: 'Дополнительный пароль владельца',
-                          prefixIcon: Icon(Icons.shield_outlined),
+                          prefixIcon: const Icon(Icons.shield_outlined),
+                          suffixIcon: IconButton(
+                            tooltip: obscureSecondPassword ? 'Показать пароль' : 'Скрыть пароль',
+                            onPressed: () => setState(() => obscureSecondPassword = !obscureSecondPassword),
+                            icon: Icon(obscureSecondPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                          ),
                         ),
                       ),
                     ],
