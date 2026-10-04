@@ -19,11 +19,50 @@ class _AdminPageState extends State<AdminPage> {
   List<dynamic> orders = [];
   List<dynamic> reviews = [];
   List<dynamic> logs = [];
+  final productSearch = TextEditingController();
+  final orderSearch = TextEditingController();
+  final userSearch = TextEditingController();
+  final logSearch = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     refresh();
+  }
+
+  @override
+  void dispose() {
+    productSearch.dispose();
+    orderSearch.dispose();
+    userSearch.dispose();
+    logSearch.dispose();
+    super.dispose();
+  }
+
+  String _text(dynamic value) => value?.toString() ?? '';
+
+  List<dynamic> get filteredProducts {
+    final q = productSearch.text.trim().toLowerCase();
+    if (q.isEmpty) return products;
+    return products.where((p) => '${_text(p['name'])} ${_text(p['category'])} ${_text(p['id'])}'.toLowerCase().contains(q)).toList();
+  }
+
+  List<dynamic> get filteredOrders {
+    final q = orderSearch.text.trim().toLowerCase();
+    if (q.isEmpty) return orders;
+    return orders.where((o) => '${_text(o['id'])} ${_text(o['email'])} ${_text(o['status'])}'.toLowerCase().contains(q)).toList();
+  }
+
+  List<dynamic> get filteredUsers {
+    final q = userSearch.text.trim().toLowerCase();
+    if (q.isEmpty) return users;
+    return users.where((u) => '${_text(u['id'])} ${_text(u['email'])} ${_text(u['role'])}'.toLowerCase().contains(q)).toList();
+  }
+
+  List<dynamic> get filteredLogs {
+    final q = logSearch.text.trim().toLowerCase();
+    if (q.isEmpty) return logs;
+    return logs.where((l) => '${_text(l['action'])} ${_text(l['admin_email'])} ${_text(l['details'])}'.toLowerCase().contains(q)).toList();
   }
 
   Future<void> refresh() async {
@@ -61,31 +100,68 @@ class _AdminPageState extends State<AdminPage> {
   @override
   Widget build(BuildContext context) {
     final isOwner = AuthService.user?.isOwner == true;
-    final items = <NavigationRailDestination>[
-      const NavigationRailDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: Text('Главная')),
-      const NavigationRailDestination(icon: Icon(Icons.inventory_2_outlined), selectedIcon: Icon(Icons.inventory_2), label: Text('Товары')),
-      const NavigationRailDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long), label: Text('Заказы')),
-      const NavigationRailDestination(icon: Icon(Icons.rate_review_outlined), selectedIcon: Icon(Icons.rate_review), label: Text('Отзывы')),
-      if (isOwner) const NavigationRailDestination(icon: Icon(Icons.admin_panel_settings_outlined), selectedIcon: Icon(Icons.admin_panel_settings), label: Text('Команда')),
-      if (isOwner) const NavigationRailDestination(icon: Icon(Icons.history), selectedIcon: Icon(Icons.history), label: Text('Логи')),
+    final labels = <String>[
+      'Главная',
+      'Товары',
+      'Заказы',
+      'Отзывы',
+      if (isOwner) 'Команда',
+      if (isOwner) 'Логи',
     ];
+    final icons = <IconData>[
+      Icons.dashboard_outlined,
+      Icons.inventory_2_outlined,
+      Icons.receipt_long_outlined,
+      Icons.rate_review_outlined,
+      if (isOwner) Icons.admin_panel_settings_outlined,
+      if (isOwner) Icons.history,
+    ];
+
+    if (section >= labels.length) section = 0;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Админ-панель BELVON SHOP', style: TextStyle(fontWeight: FontWeight.w900)),
-        actions: [IconButton(onPressed: refresh, icon: const Icon(Icons.refresh)), const SizedBox(width: 8)],
-      ),
-      body: Row(
-        children: [
-          NavigationRail(
-            selectedIndex: section,
-            onDestinationSelected: (value) => setState(() => section = value),
-            labelType: NavigationRailLabelType.all,
-            destinations: items,
+        actions: [
+          Chip(
+            avatar: Icon(isOwner ? Icons.verified_user : Icons.admin_panel_settings, size: 16),
+            label: Text(isOwner ? 'Владелец' : 'Администратор'),
           ),
-          const VerticalDivider(width: 1),
-          Expanded(child: loading ? const Center(child: CircularProgressIndicator()) : _content(isOwner)),
+          const SizedBox(width: 8),
+          IconButton(tooltip: 'Обновить всё', onPressed: refresh, icon: const Icon(Icons.refresh)),
+          const SizedBox(width: 8),
         ],
+      ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 820;
+          final navigation = compact
+              ? NavigationBar(
+                  selectedIndex: section,
+                  onDestinationSelected: (value) => setState(() => section = value),
+                  destinations: [
+                    for (var i = 0; i < labels.length; i++)
+                      NavigationDestination(icon: Icon(icons[i]), label: labels[i]),
+                  ],
+                )
+              : NavigationRail(
+                  selectedIndex: section,
+                  onDestinationSelected: (value) => setState(() => section = value),
+                  labelType: NavigationRailLabelType.all,
+                  destinations: [
+                    for (var i = 0; i < labels.length; i++)
+                      NavigationRailDestination(icon: Icon(icons[i]), selectedIcon: Icon(icons[i]), label: Text(labels[i])),
+                  ],
+                );
+
+          final content = loading
+              ? const Center(child: CircularProgressIndicator())
+              : _content(isOwner);
+
+          return compact
+              ? Column(children: [Expanded(child: content), navigation])
+              : Row(children: [navigation, const VerticalDivider(width: 1), Expanded(child: content)]);
+        },
       ),
     );
   }
@@ -144,6 +220,31 @@ class _AdminPageState extends State<AdminPage> {
               ),
             ),
           ),
+          const SizedBox(height: 24),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Центр управления', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 8),
+                const Text('Единая точка контроля каталога, пользователей, модерации, заказов и журнала действий.'),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    FilledButton.icon(onPressed: () => setState(() => section = 1), icon: const Icon(Icons.inventory_2), label: const Text('Каталог')),
+                    FilledButton.tonalIcon(onPressed: () => setState(() => section = 2), icon: const Icon(Icons.receipt_long), label: const Text('Заказы')),
+                    FilledButton.tonalIcon(onPressed: () => setState(() => section = 3), icon: const Icon(Icons.rate_review), label: const Text('Модерация')),
+                    if (AuthService.user?.isOwner == true)
+                      FilledButton.tonalIcon(onPressed: () => setState(() => section = 4), icon: const Icon(Icons.admin_panel_settings), label: const Text('Доступы')),
+                    if (AuthService.user?.isOwner == true)
+                      FilledButton.tonalIcon(onPressed: () => setState(() => section = 5), icon: const Icon(Icons.history), label: const Text('Аудит')),
+                  ],
+                ),
+              ]),
+            ),
+          ),
         ],
       ),
     );
@@ -156,8 +257,14 @@ class _AdminPageState extends State<AdminPage> {
         Expanded(child: Text('Товары (${products.length})', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900))),
         FilledButton.icon(onPressed: () => _productDialog(), icon: const Icon(Icons.add), label: const Text('Добавить')),
       ]),
+      const SizedBox(height: 12),
+      TextField(
+        controller: productSearch,
+        onChanged: (_) => setState(() {}),
+        decoration: InputDecoration(prefixIcon: const Icon(Icons.search), labelText: 'Поиск по каталогу', suffixIcon: productSearch.text.isEmpty ? null : IconButton(onPressed: () { productSearch.clear(); setState(() {}); }, icon: const Icon(Icons.clear))),
+      ),
       const SizedBox(height: 14),
-      ...products.map((p) => Card(child: ListTile(
+      ...filteredProducts.map((p) => Card(child: ListTile(
         leading: CircleAvatar(child: Text('${p['id']}')),
         title: Text(p['name']?.toString() ?? ''),
         subtitle: Text('${p['category']} • ${p['price']} ₽ • ${p['available'] == true ? 'активен' : 'скрыт'}'),
@@ -243,8 +350,14 @@ class _AdminPageState extends State<AdminPage> {
     padding: const EdgeInsets.all(24),
     children: [
       const Text('Заказы', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
+      const SizedBox(height: 12),
+      TextField(
+        controller: orderSearch,
+        onChanged: (_) => setState(() {}),
+        decoration: InputDecoration(prefixIcon: const Icon(Icons.search), labelText: 'Поиск по заказам', suffixIcon: orderSearch.text.isEmpty ? null : IconButton(onPressed: () { orderSearch.clear(); setState(() {}); }, icon: const Icon(Icons.clear))),
+      ),
       const SizedBox(height: 14),
-      ...orders.map((o) => Card(child: ListTile(
+      ...filteredOrders.map((o) => Card(child: ListTile(
         title: Text('Заказ #${o['id']} • ${o['total']} ₽'),
         subtitle: Text('${o['email'] ?? 'клиент'} • ${o['status']}'),
         trailing: PopupMenuButton<String>(
@@ -293,9 +406,15 @@ class _AdminPageState extends State<AdminPage> {
     children: [
       const Text('Команда и доступы', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
       const SizedBox(height: 8),
-      const Text('Владелец может выдавать и отзывать права администратора и блокировать аккаунты.'),
+      const Text('Раздел владельца: управление ролями, блокировкой аккаунтов и доступом сотрудников.'),
+      const SizedBox(height: 12),
+      TextField(
+        controller: userSearch,
+        onChanged: (_) => setState(() {}),
+        decoration: InputDecoration(prefixIcon: const Icon(Icons.search), labelText: 'Поиск пользователей', suffixIcon: userSearch.text.isEmpty ? null : IconButton(onPressed: () { userSearch.clear(); setState(() {}); }, icon: const Icon(Icons.clear))),
+      ),
       const SizedBox(height: 14),
-      ...users.map((u) => Card(child: ListTile(
+      ...filteredUsers.map((u) => Card(child: ListTile(
         title: Text(u['email']?.toString() ?? ''),
         subtitle: Text('ID ${u['id']} • ${u['role']} • ${u['blocked'] == true ? 'заблокирован' : 'активен'}'),
         trailing: PopupMenuButton<String>(
@@ -321,9 +440,17 @@ class _AdminPageState extends State<AdminPage> {
   Widget _logs() => ListView(
     padding: const EdgeInsets.all(24),
     children: [
-      const Text('Журнал действий', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
+      const Text('Журнал действий и аудит', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
+      const SizedBox(height: 8),
+      const Text('Все доступные сервером административные события отображаются здесь для контроля действий команды.'),
+      const SizedBox(height: 12),
+      TextField(
+        controller: logSearch,
+        onChanged: (_) => setState(() {}),
+        decoration: InputDecoration(prefixIcon: const Icon(Icons.search), labelText: 'Поиск по журналу', suffixIcon: logSearch.text.isEmpty ? null : IconButton(onPressed: () { logSearch.clear(); setState(() {}); }, icon: const Icon(Icons.clear))),
+      ),
       const SizedBox(height: 14),
-      ...logs.map((l) => Card(child: ListTile(
+      ...filteredLogs.map((l) => Card(child: ListTile(
         leading: const Icon(Icons.history),
         title: Text(l['action']?.toString() ?? ''),
         subtitle: Text('${l['admin_email'] ?? 'система'} • ${l['details'] ?? ''}'),
