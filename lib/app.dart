@@ -475,6 +475,7 @@ class _ShopPageState extends State<ShopPage> {
   void initState() {
     super.initState();
     _loadFavorites();
+    _loadCatalog();
     if (AuthService.user?.isAdmin == true) {
       approvalTimer = Timer.periodic(const Duration(seconds: 6), (_) => checkDeviceRequests());
       Future<void>.delayed(const Duration(seconds: 2), checkDeviceRequests);
@@ -528,8 +529,29 @@ class _ShopPageState extends State<ShopPage> {
   final favorites = <int>{};
   final cart = <int, int>{};
   bool favoritesLoaded = false;
+  bool catalogLoading = true;
+  bool catalogRemote = false;
+  List<Product> catalogProducts = products;
   String favoritesSort = 'Недавно добавленные';
   final readNotificationIds = <String>{};
+
+  Future<void> _loadCatalog() async {
+    if (!ApiService.isConfigured) {
+      if (mounted) setState(() => catalogLoading = false);
+      return;
+    }
+    try {
+      final remote = await ApiService.fetchProducts();
+      if (!mounted) return;
+      setState(() {
+        catalogProducts = remote;
+        catalogRemote = true;
+        catalogLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => catalogLoading = false);
+    }
+  }
 
   Future<void> _loadFavorites() async {
     final saved = await FavoritesService.load();
@@ -553,14 +575,14 @@ class _ShopPageState extends State<ShopPage> {
     await FavoritesService.save(favorites);
   }
 
-  List<String> get categories => ['Все', ...{for (final p in products) p.category}];
+  List<String> get categories => ['Все', ...{for (final p in catalogProducts) p.category}];
 
   String _normalizeSearch(String value) => value
       .trim()
       .toLowerCase()
       .replaceAll(RegExp(r'\s+'), ' ');
 
-  List<Product> get filtered => products.where((p) {
+  List<Product> get filtered => catalogProducts.where((p) {
     final q = _normalizeSearch(query);
     return (category == 'Все' || p.category == category) &&
       (q.isEmpty || p.name.toLowerCase().contains(q) || p.description.toLowerCase().contains(q));
@@ -613,7 +635,7 @@ class _ShopPageState extends State<ShopPage> {
   int get cartCount => cart.values.fold(0, (a, b) => a + b);
 
   double get cartTotal => cart.entries.fold(0, (total, entry) {
-    final p = products.firstWhere((x) => x.id == entry.key);
+    final p = catalogProducts.firstWhere((x) => x.id == entry.key, orElse: () => products.firstWhere((x) => x.id == entry.key));
     return total + p.price * entry.value;
   });
 
