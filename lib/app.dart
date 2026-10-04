@@ -6,6 +6,7 @@ import 'models/product.dart';
 import 'services/update_service.dart';
 import 'services/auth_service.dart';
 import 'services/api_service.dart';
+import 'services/favorites_service.dart';
 import 'admin/admin_page.dart';
 import 'theme/app_theme.dart';
 import 'widgets/belvon_card.dart';
@@ -468,6 +469,30 @@ class _ShopPageState extends State<ShopPage> {
   final recentSearches = <String>[];
   final favorites = <int>{};
   final cart = <int, int>{};
+  bool favoritesLoaded = false;
+  String favoritesSort = 'Недавно добавленные';
+
+  Future<void> _loadFavorites() async {
+    final saved = await FavoritesService.load();
+    if (!mounted) return;
+    setState(() {
+      favorites
+        ..clear()
+        ..addAll(saved);
+      favoritesLoaded = true;
+    });
+  }
+
+  Future<void> _toggleFavorite(int productId) async {
+    setState(() {
+      if (favorites.contains(productId)) {
+        favorites.remove(productId);
+      } else {
+        favorites.add(productId);
+      }
+    });
+    await FavoritesService.save(favorites);
+  }
 
   List<String> get categories => ['Все', ...{for (final p in products) p.category}];
 
@@ -1078,21 +1103,75 @@ class _ShopPageState extends State<ShopPage> {
   }
 
   Widget favoritesPage() {
-    final list = products.where((p) => favorites.contains(p.id)).toList();
-    if (list.isEmpty) {
-      return const BelvonEmptyState(
-        icon: Icons.favorite_border_rounded,
-        title: 'В избранном пока пусто',
-        message: 'Добавленные элементы появятся здесь.',
-      );
+    var list = products.where((p) => favorites.contains(p.id)).toList();
+
+    switch (favoritesSort) {
+      case 'Цена ↑':
+        list.sort((a, b) => a.price.compareTo(b.price));
+        break;
+      case 'Цена ↓':
+        list.sort((a, b) => b.price.compareTo(a.price));
+        break;
+      case 'Название':
+        list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        break;
     }
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 380, mainAxisExtent: 330, crossAxisSpacing: 14, mainAxisSpacing: 14,
-      ),
-      itemCount: list.length,
-      itemBuilder: (_, i) => productCard(list[i]),
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  favorites.isEmpty
+                      ? 'Избранное'
+                      : '${favorites.length} ${favorites.length == 1 ? 'товар' : favorites.length < 5 ? 'товара' : 'товаров'}',
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+                ),
+              ),
+              if (favorites.isNotEmpty)
+                PopupMenuButton<String>(
+                  tooltip: 'Сортировка',
+                  initialValue: favoritesSort,
+                  onSelected: (value) => setState(() => favoritesSort = value),
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'Недавно добавленные', child: Text('Недавно добавленные')),
+                    PopupMenuItem(value: 'Цена ↑', child: Text('Цена: по возрастанию')),
+                    PopupMenuItem(value: 'Цена ↓', child: Text('Цена: по убыванию')),
+                    PopupMenuItem(value: 'Название', child: Text('По названию')),
+                  ],
+                  child: const Icon(Icons.sort_rounded),
+                ),
+            ],
+          ),
+        ),
+        if (list.isEmpty)
+          Expanded(
+            child: BelvonEmptyState(
+              icon: Icons.favorite_border_rounded,
+              title: 'В избранном пока пусто',
+              message: 'Сохраняйте понравившиеся товары — они появятся здесь.',
+              action: () => openTab(1),
+              actionLabel: 'Перейти в каталог',
+            ),
+          )
+        else
+          Expanded(
+            child: GridView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 380,
+                mainAxisExtent: 330,
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
+              ),
+              itemCount: list.length,
+              itemBuilder: (_, i) => productCard(list[i]),
+            ),
+          ),
+      ],
     );
   }
 
@@ -1354,11 +1433,7 @@ class _ShopPageState extends State<ShopPage> {
                   ),
                   IconButton(
                     tooltip: liked ? 'Убрать из избранного' : 'Добавить в избранное',
-                    onPressed: () => setState(
-                      () => liked
-                          ? favorites.remove(p.id)
-                          : favorites.add(p.id),
-                    ),
+                    onPressed: () => _toggleFavorite(p.id),
                     icon: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 180),
                       transitionBuilder: (child, animation) =>
@@ -1395,15 +1470,7 @@ class _ShopPageState extends State<ShopPage> {
         builder: (_) => ProductDetailsPage(
           product: p,
           liked: favorites.contains(p.id),
-          onToggleFavorite: () {
-            setState(() {
-              if (favorites.contains(p.id)) {
-                favorites.remove(p.id);
-              } else {
-                favorites.add(p.id);
-              }
-            });
-          },
+          onToggleFavorite: () => _toggleFavorite(p.id),
         ),
       ),
     );
