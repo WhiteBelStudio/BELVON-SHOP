@@ -417,6 +417,7 @@ class _ShopPageState extends State<ShopPage> {
   @override
   void initState() {
     super.initState();
+    _loadFavorites();
     if (AuthService.user?.isAdmin == true) {
       approvalTimer = Timer.periodic(const Duration(seconds: 6), (_) => checkDeviceRequests());
       Future<void>.delayed(const Duration(seconds: 2), checkDeviceRequests);
