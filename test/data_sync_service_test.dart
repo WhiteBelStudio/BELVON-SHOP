@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../lib/models/product.dart';
-import '../lib/services/data_sync_service.dart';
+import 'package:belvon_shop/models/product.dart';
+import 'package:belvon_shop/services/data_sync_service.dart';
 
 void main() {
   setUp(() async {
