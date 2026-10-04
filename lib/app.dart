@@ -7,6 +7,7 @@ import 'services/update_service.dart';
 import 'services/auth_service.dart';
 import 'services/api_service.dart';
 import 'services/favorites_service.dart';
+import 'notifications/notifications_page.dart';
 import 'admin/admin_page.dart';
 import 'theme/app_theme.dart';
 import 'widgets/belvon_card.dart';
@@ -527,6 +528,7 @@ class _ShopPageState extends State<ShopPage> {
   final cart = <int, int>{};
   bool favoritesLoaded = false;
   String favoritesSort = 'Недавно добавленные';
+  final readNotificationIds = <String>{};
 
   Future<void> _loadFavorites() async {
     final saved = await FavoritesService.load();
@@ -587,6 +589,26 @@ class _ShopPageState extends State<ShopPage> {
     });
   }
 
+  int get unreadNotificationCount =>
+      belvonNotifications.where((n) => !readNotificationIds.contains(n.id)).length;
+
+  void openNotifications() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => NotificationsPage(
+          readIds: readNotificationIds,
+          onRead: (id) => setState(() => readNotificationIds.add(id)),
+          onReadAll: () => setState(() {
+            readNotificationIds
+              ..clear()
+              ..addAll(belvonNotifications.map((n) => n.id));
+          }),
+        ),
+      ),
+    );
+    if (mounted) setState(() {});
+  }
+
   int get cartCount => cart.values.fold(0, (a, b) => a + b);
 
   double get cartTotal => cart.entries.fold(0, (total, entry) {
@@ -623,6 +645,15 @@ class _ShopPageState extends State<ShopPage> {
           icon: const Icon(Icons.search_rounded),
         ),
         IconButton(onPressed: () => openTab(2), icon: const Icon(Icons.favorite_rounded)),
+        Badge(
+          isLabelVisible: unreadNotificationCount > 0,
+          label: Text(unreadNotificationCount.toString()),
+          child: IconButton(
+            tooltip: 'Уведомления',
+            onPressed: openNotifications,
+            icon: const Icon(Icons.notifications_none_rounded),
+          ),
+        ),
         Badge(
           isLabelVisible: cartCount > 0,
           label: Text(cartCount.toString()),
