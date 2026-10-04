@@ -1,11 +1,15 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import '../models/product.dart';
 
 import 'auth_service.dart';
 
 class ApiService {
   static const baseUrl = String.fromEnvironment('API_BASE_URL');
+  static const _timeout = Duration(seconds: 12);
+
+  static bool get isConfigured => baseUrl.trim().isNotEmpty;
 
   static Uri _uri(String path) {
     if (baseUrl.isEmpty) {
@@ -44,19 +48,19 @@ class ApiService {
     try {
       switch (method) {
         case 'GET':
-          response = await http.get(uri, headers: headers);
+          response = await http.get(uri, headers: headers).timeout(_timeout);
           break;
         case 'POST':
-          response = await http.post(uri, headers: headers, body: encoded);
+          response = await http.post(uri, headers: headers, body: encoded).timeout(_timeout);
           break;
         case 'PATCH':
-          response = await http.patch(uri, headers: headers, body: encoded);
+          response = await http.patch(uri, headers: headers, body: encoded).timeout(_timeout);
           break;
         case 'PUT':
-          response = await http.put(uri, headers: headers, body: encoded);
+          response = await http.put(uri, headers: headers, body: encoded).timeout(_timeout);
           break;
         case 'DELETE':
-          response = await http.delete(uri, headers: headers);
+          response = await http.delete(uri, headers: headers).timeout(_timeout);
           break;
         default:
           throw Exception('Unsupported method');
@@ -80,6 +84,51 @@ class ApiService {
     }
 
     return decoded;
+  }
+
+
+  static Future<bool> healthCheck() async {
+    if (!isConfigured) return false;
+    try {
+      final data = await request('GET', '/health/live', auth: false);
+      return data is Map ? (data['status']?.toString().toLowerCase() == 'ok' || data['healthy'] == true || data['status'] == 200) : true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<List<Product>> fetchProducts() async {
+    final data = await request('GET', '/catalog/products', auth: false);
+    final raw = data is Map<String, dynamic> ? data['items'] ?? data['products'] : data;
+    if (raw is! List) throw const FormatException('Некорректный ответ каталога.');
+    return raw
+        .whereType<Map>()
+        .map((item) => Product.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+  }
+
+  static Future<AuthUser> fetchCurrentUser() async {
+    final data = await request('GET', '/auth/me');
+    final raw = data is Map<String, dynamic> && data['user'] is Map
+        ? data['user'] as Map
+        : data as Map<String, dynamic>;
+    return AuthUser.fromJson(raw);
+  }
+
+  static Future<Map<String, dynamic>> fetchProfile() async {
+    return await request('GET', '/profile') as Map<String, dynamic>;
+  }
+
+  static Future<List<dynamic>> fetchAdminUsers() async {
+    return await request('GET', '/admin/users') as List<dynamic>;
+  }
+
+  static Future<List<dynamic>> fetchAdminOrders() async {
+    return await request('GET', '/admin/orders') as List<dynamic>;
+  }
+
+  static Future<List<dynamic>> fetchAdminLogs() async {
+    return await request('GET', '/admin/logs') as List<dynamic>;
   }
 
   static Future<AuthUser> ownerLogin(
