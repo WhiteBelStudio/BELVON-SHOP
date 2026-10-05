@@ -10,40 +10,60 @@ class UpdateInfo {
 }
 
 class UpdateService {
-  static const currentVersion = '1.3.1';
+  static const currentVersion =
+      String.fromEnvironment('APP_VERSION', defaultValue: '1.3.3');
   static const releaseApi =
       'https://api.github.com/repos/WhiteBelStudio/BELVON-SHOP/releases/latest';
 
   static Future<UpdateInfo?> checkForUpdate() async {
-    final response = await http
-        .get(Uri.parse(releaseApi), headers: const {
-          'Accept': 'application/vnd.github+json',
-          'User-Agent': 'BELVON-SHOP',
-        })
-        .timeout(const Duration(seconds: 8));
-    if (response.statusCode != 200) throw Exception('Не удалось проверить обновления');
+    final response = await http.get(
+      Uri.parse(releaseApi),
+      headers: const {
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': 'BELVON-SHOP',
+      },
+    ).timeout(const Duration(seconds: 8));
+
+    if (response.statusCode != 200) {
+      throw Exception('Не удалось проверить обновления');
+    }
+
     final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final tag = (data['tag_name'] as String? ?? '').replaceFirst('v', '');
+    final tag = (data['tag_name'] as String? ?? '')
+        .replaceFirst(RegExp(r'^v'), '');
     final url = data['html_url'] as String? ??
         'https://github.com/WhiteBelStudio/BELVON-SHOP/releases';
+
     if (tag.isEmpty || !_isNewer(tag, currentVersion)) return null;
     return UpdateInfo(version: tag, url: url);
   }
 
   static bool _isNewer(String remote, String local) {
-    List<int> parse(String value) => value.split('+').first.split('.').map((p) => int.tryParse(p) ?? 0).toList();
-    final a = parse(remote);
-    final b = parse(local);
+    List<int> parse(String value) {
+      final core = value.split('+').first.split('-').first;
+      final parts = core.split('.');
+      return List.generate(
+        3,
+        (index) => index < parts.length ? int.tryParse(parts[index]) ?? 0 : 0,
+      );
+    }
+
+    final remoteParts = parse(remote);
+    final localParts = parse(local);
+
     for (var i = 0; i < 3; i++) {
-      final av = i < a.length ? a[i] : 0;
-      final bv = i < b.length ? b[i] : 0;
-      if (av != bv) return av > bv;
+      if (remoteParts[i] != localParts[i]) {
+        return remoteParts[i] > localParts[i];
+      }
     }
     return false;
   }
 
   static Future<void> openRelease(String url) async {
-    if (!await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication)) {
+    if (!await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    )) {
       throw Exception('Не удалось открыть страницу обновления');
     }
   }
