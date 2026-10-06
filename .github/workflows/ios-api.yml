@@ -100,6 +100,12 @@ jobs:
       - name: Run automated tests
         run: flutter test --reporter expanded
 
+      - name: Verify test suite completed cleanly
+        shell: bash
+        run: |
+          flutter test --reporter expanded
+          echo "iOS test suite passed cleanly."
+
       - name: Build iOS with production API
         run: |
           flutter build ios --release --no-codesign \
