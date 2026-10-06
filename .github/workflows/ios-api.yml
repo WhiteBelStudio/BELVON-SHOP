@@ -1,0 +1,70 @@
+name: iOS Production API Validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  API_BASE_URL: https://belvonshop-c08vk0tne-neon-messenger-4294.vercel.app
+
+jobs:
+  ios-api:
+    name: iOS Production API
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Validate production API URL
+        shell: bash
+        run: |
+          test "$API_BASE_URL" = "https://belvonshop-c08vk0tne-neon-messenger-4294.vercel.app"
+          echo "Production API: $API_BASE_URL"
+
+      - name: Check production API health
+        shell: bash
+        run: |
+          curl --fail --silent --show-error --location \
+            --max-time 15 \
+            "$API_BASE_URL/health/live"
+          echo
+          echo "Production API health check passed."
+
+      - name: Generate iOS platform files
+        run: flutter create --platforms=ios .
+
+      - name: Restore project test files
+        run: git checkout -- test/widget_test.dart
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Verify Dart API configuration
+        shell: bash
+        run: |
+          grep -q "String.fromEnvironment('API_BASE_URL')" lib/services/api_service.dart
+          echo "API_BASE_URL is wired through Dart compile-time configuration."
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run automated tests
+        run: flutter test --reporter expanded
+
+      - name: Build iOS with production API
+        run: |
+          flutter build ios --release --no-codesign \
+            --dart-define=API_BASE_URL="$API_BASE_URL"
