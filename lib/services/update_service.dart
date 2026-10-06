@@ -11,7 +11,7 @@ class UpdateInfo {
 
 class UpdateService {
   static const currentVersion =
-      String.fromEnvironment('APP_VERSION', defaultValue: '1.3.3');
+      String.fromEnvironment('APP_VERSION', defaultValue: '1.3.4');
   static const releaseApi =
       'https://api.github.com/repos/WhiteBelStudio/BELVON-SHOP/releases/latest';
 
