@@ -142,6 +142,7 @@ jobs:
     needs: [android, windows]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Read app version
         id: version
         shell: bash
