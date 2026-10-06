@@ -134,3 +134,11 @@ jobs:
           test -f build/ios/archive/Runner.xcarchive/Info.plist
           test -f build/ios/ipa/BELVON\ SHOP.ipa
           echo "Unsigned iOS archive and IPA verified."
+
+      - name: Check signing prerequisites
+        shell: bash
+        run: |
+          echo "Bundle ID: com.whitebelstudio.belvonshop"
+          echo "Signing status: unsigned CI build"
+          echo "TestFlight upload requires Apple Developer signing credentials and provisioning profiles."
+          echo "No signing secrets are committed to the repository."
