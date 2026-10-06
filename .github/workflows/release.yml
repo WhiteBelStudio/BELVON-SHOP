@@ -106,25 +106,41 @@ jobs:
           $version = $env:APP_VERSION
           $iss = @"
           [Setup]
+          AppId={{8C0D2E6E-3D30-4A2D-B2B3-3D4E0A8D1B51}
           AppName=BELVON SHOP
           AppVersion=$version
           AppPublisher=WhiteBelStudio
-          DefaultDirName={autopf}\BELVON SHOP
+          AppPublisherURL=https://github.com/WhiteBelStudio/BELVON-SHOP
+          AppSupportURL=https://github.com/WhiteBelStudio/BELVON-SHOP/issues
+          AppUpdatesURL=https://github.com/WhiteBelStudio/BELVON-SHOP/releases
+          DefaultDirName={localappdata}\Programs\BELVON SHOP
           DefaultGroupName=BELVON SHOP
           OutputDir=.
           OutputBaseFilename=BELVON-SHOP-Windows-Setup-$version
           Compression=lzma2
           SolidCompression=yes
+          ArchitecturesAllowed=x64compatible
           ArchitecturesInstallIn64BitMode=x64compatible
           UninstallDisplayName=BELVON SHOP
+          UninstallDisplayIcon={app}\belvon_shop.exe
           PrivilegesRequired=lowest
           DisableProgramGroupPage=yes
           WizardStyle=modern
+          UsePreviousAppDir=yes
+          VersionInfoCompany=WhiteBelStudio
+          VersionInfoDescription=BELVON SHOP for Windows
+          VersionInfoProductName=BELVON SHOP
+          VersionInfoProductVersion=$version
+          VersionInfoTextVersion=$version
+          [Tasks]
+          Name: "desktopicon"; Description: "Создать ярлык на рабочем столе"; GroupDescription: "Дополнительные ярлыки:"
+          Name: "startmenuicon"; Description: "Создать ярлык в меню Пуск"; GroupDescription: "Дополнительные ярлыки:"; Flags: unchecked
           [Files]
-          Source: "$release\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+          Source: "$release\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
           [Icons]
-          Name: "{autodesktop}\BELVON SHOP"; Filename: "{app}\belvon_shop.exe"
-          Name: "{group}\BELVON SHOP"; Filename: "{app}\belvon_shop.exe"
+          Name: "{autodesktop}\BELVON SHOP"; Filename: "{app}\belvon_shop.exe"; Tasks: desktopicon
+          Name: "{group}\BELVON SHOP"; Filename: "{app}\belvon_shop.exe"; Tasks: startmenuicon
+          Name: "{group}\Удалить BELVON SHOP"; Filename: "{uninstallexe}"
           [Run]
           Filename: "{app}\belvon_shop.exe"; Description: "Запустить BELVON SHOP"; Flags: nowait postinstall skipifsilent
           "@
@@ -138,7 +154,7 @@ jobs:
 
   release:
     name: Publish BELVON SHOP Release
-    if: needs.android.result == 'success' && needs.windows.result == 'success'
+    if: needs.android.result == 'success' && needs.windows.result == 'success' && startsWith(github.event.head_commit.message, 'release:')
     needs: [android, windows]
     runs-on: ubuntu-latest
     steps:
