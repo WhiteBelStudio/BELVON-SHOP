@@ -119,3 +119,18 @@ jobs:
           test -d build/ios/iphoneos/Runner.app
           test -f build/ios/iphoneos/Runner.app/Info.plist
           echo "iOS release build output verified: build/ios/iphoneos/Runner.app"
+
+      - name: Create unsigned iOS archive and IPA
+        run: |
+          flutter build ipa --release --no-codesign \
+            --build-name="$APP_VERSION" \
+            --build-number="$BUILD_NUMBER" \
+            --dart-define=API_BASE_URL="$API_BASE_URL"
+
+      - name: Verify iOS archive and IPA
+        shell: bash
+        run: |
+          test -d build/ios/archive/Runner.xcarchive
+          test -f build/ios/archive/Runner.xcarchive/Info.plist
+          test -f build/ios/ipa/BELVON\ SHOP.ipa
+          echo "Unsigned iOS archive and IPA verified."
