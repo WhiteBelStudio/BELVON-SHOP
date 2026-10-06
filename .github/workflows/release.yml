@@ -17,7 +17,8 @@ env:
 jobs:
   android:
     name: Android APK
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -56,7 +57,7 @@ jobs:
         run: flutter build apk --release --dart-define=API_BASE_URL="$API_BASE_URL" --dart-define=APP_VERSION="$APP_VERSION"
       - uses: actions/upload-artifact@v4
         with:
-          name: BELVON-SHOP-Android
+          name: BELVON-SHOP-Android-${{ env.APP_VERSION }}
           path: build/app/outputs/flutter-apk/app-release.apk
 
   windows:
